@@ -1,0 +1,176 @@
+VENDOR ROLE – COMPLETE DOCUMENTATION (UI/UX, COMPONENTS, DATA, REAL‑TIME)
+
+1) PURPOSE & SCOPE
+- The Vendor Role gives supplier-side users a focused, real-time view of their production, shipments, QR code activity, and blockchain records.
+- It follows Stitch AI’s mobile‑first design language and uses global tokens for pixel‑consistent colors, typography, spacing, and interactions.
+- This document covers: information architecture, all vendor components, their purpose, UI/UX behavior, real-time data integration, accessibility, localization, testing, and extensibility.
+
+
+2) INFORMATION ARCHITECTURE (IA)
+- Screen: Vendor Dashboard (src/components/Dashboard/VendorDashboard.tsx)
+  - Header: Screen title, current vendor greeting, Refresh/New Batch actions.
+  - KPI Row: 5 tokenized KPI cards with micro‑visualizations (sparkline, donut, bars).
+  - Charts Row:
+    - Performance Overview (Line chart: batches, shipments, quality%).
+    - Fitting Types Distribution (Pie chart).
+  - Lists:
+    - Recent Batches (status, metadata, quick action).
+    - Recent Shipments (status, metadata, quick action).
+- Cross‑cutting: Global tokens (src/index.css) for colors, typography, spacing, grid, touch targets.
+
+
+3) COMPONENTS & PURPOSE
+(3.1) Page Container
+- File: VendorDashboard.tsx
+- Purpose: Orchestrates vendor-specific state and renders sub-sections.
+- UX: Mobile‑first layout, responsive grids (1 → 2 → 5 columns), tokenized backgrounds/borders.
+
+(3.2) Header
+- Elements: Title (Vendor Dashboard), greeting (from useAuth.userData), buttons: Refresh, New Batch.
+- Purpose: Primary context + actions.
+- UX: Tokenized colors; buttons meet 44px touch target; no overlap at 320px; accessible contrast.
+
+(3.3) KPI Cards (Top Row, 5 items)
+- Total Batches
+  - Value: stats.totalBatches
+  - Micro‑viz: sparkline (SVG) with gradient fill using --color-primary.
+  - Why: Quick glance at production volume trends.
+- Pending Shipments
+  - Value: stats.pendingShipments
+  - Micro‑viz: circular progress (donut) using --color-warning; base ring --color-border.
+  - Why: Surfaces bottlenecks vs completed shipments (capacity & SLA planning).
+- Completed Shipments
+  - Value: stats.completedShipments
+  - Micro‑viz: 5 mini bars using --color-success over --color-border.
+  - Why: Recent fulfillment velocity snapshot.
+- QR Codes Generated
+  - Value: stats.qrCodesGenerated (localized)
+  - Micro‑viz: sparkline with --color-secondary gradient.
+  - Why: Tracking labeling/tracing throughput.
+- Blockchain Records
+  - Value: stats.blockchainRecords (localized)
+  - Micro‑viz: donut ring using --color-accent; base ring --color-border.
+  - Why: Evidence of traceability and audit coverage.
+- Shared UI/UX: Tokenized background (--color-card), border (--color-border), text (--color-text-*). Micro‑viz SVGs avoid flicker and scale down to 320px cleanly.
+
+(3.4) Performance Overview (LineChart)
+- Data: performanceData [{ month, batches, shipments, quality }].
+- Colors: --chart-primary (batches), --chart-success (shipments), --chart-warning (quality).
+- UX: Smooth, responsive via Recharts ResponsiveContainer; readable labels on mobile.
+- Why: A multi-metric trend that correlates production and logistics quality.
+
+(3.5) Fitting Types Distribution (PieChart)
+- Data: fittingTypeData [{ name, value, count }].
+- Colors: Tokenized palette (var(--color-*) via COLORS array).
+- Labels: name + count to ground value meaning.
+- Why: Inventory mix insight, useful for planning and quality focus.
+
+(3.6) Recent Batches List
+- Fields: batchNumber, fittingType, quantity, status, createdAt.
+- Status chip: semantic style via getStatusColor (light/dark aware).
+- Actions: View (Eye icon) – prepared for routing to details.
+- Why: Operational triage – what’s new, what needs action.
+
+(3.7) Recent Shipments List
+- Fields: trackingNumber, destination, batchId, status, createdAt.
+- Status chip + quick action (View).
+- Why: Logistics tracking at a glance for vendor users.
+
+
+4) DATA MODEL & SOURCES
+- Presently: populated using mock arrays in VendorDashboard.tsx (for UI validation).
+- Recommended Real‑Time Firestore schema (per vendorId):
+  - vendors/{vendorId}/stats/current
+    - totalBatches: number
+    - pendingShipments: number
+    - completedShipments: number
+    - qrCodesGenerated: number
+    - blockchainRecords: number
+  - vendors/{vendorId}/metricsDaily (time series 30 docs)
+    - date: Timestamp/ISO Date
+    - batches: number
+    - shipments: number
+    - qrCodes: number
+    - records: number
+  - vendors/{vendorId}/batches (list)
+    - batchNumber, fittingType, quantity, status, createdAt, expectedDelivery
+  - vendors/{vendorId}/shipments (list)
+    - batchId, destination, status, trackingNumber, createdAt
+
+
+5) REAL‑TIME WIRING (OPTIONAL IMPLEMENTATION NOTES)
+- Subscribe to stats/current to update KPI values live.
+- Subscribe to metricsDaily ordered by date asc limit 30 to feed sparkline/bars/donut math.
+- Use batched writes/transactions to maintain referential integrity between batches & shipments.
+- Use Firestore long‑polling (already enabled globally) for network resilience on constrained networks.
+
+
+6) UI/UX SYSTEM (TOKENS, ACCESSIBILITY, PERFORMANCE)
+- Tokens (src/index.css): colors (--color-*), charts (--chart-*), typography (clamp() scale), spacing (8px grid), grid helpers, touch targets.
+- Themes: Light, Dark, High‑Contrast via variables, OS preference supported.
+- Mobile‑first:
+  - KPI grid: 1 col → 2 col → 5 col (lg); no overlap at 320px.
+  - Charts: ResponsiveContainer; labels/primitives scale properly.
+- Touch targets: Minimum 44px; invisible hit-area expansion via .hit-area if needed.
+- Animations: SVG transitions are kept subtle and non-janky; avoid reflow by using transforms.
+- Accessibility: WCAG‑compliant color pairs through tokens; semantic headings for screen readers; readable labels at smallest breakpoints; icons have meaningful context.
+- Localization: All visible strings can be moved to i18n; cards/lists accommodate longer Indian‑language labels (no fixed widths that clip).
+
+
+7) INTERACTIONS & NAVIGATION
+- Header actions:
+  - Refresh: Hook for reloading data (swap with real fetch/subscribe).
+  - New Batch: CTA to vendor batch creation flow (route placeholder).
+- KPI cards (optional): Can support onClick to navigate to detailed screens with filtered charts.
+- List actions: View -> detailed batch/shipment route.
+
+
+8) ERROR/LOADING STATES
+- Loading: For real‑time integration, show lightweight skeletons or tokenized spinners in cards and chart areas.
+- Errors: Use neutral alert blocks with tokenized colors (warning/danger) and retry actions; keep messages concise and vendor‑friendly.
+
+
+9) SECURITY & PERMISSIONS
+- Vendors should only read/write their own documents:
+  - Firestore security rules: enforce vendorId scoping, least privilege.
+  - Hide admin‑only controls and analytics.
+- Sensitive identifiers (e.g., blockchain refs) must be truncated in UI when lengthy; offer copy buttons where appropriate.
+
+
+10) TESTING & QUALITY CHECKLIST
+- Visual parity across light/dark/high‑contrast.
+- 320px→1080px responsive checks for KPI row, charts, and lists.
+- Chart tooltips/readability at smallest sizes.
+- Status chips legibility and meaning across themes.
+- Keyboard focus order and visible focus states on interactive elements.
+- Locale expansion tests with long labels in Hindi/Tamil/Telugu/etc.
+- Performance: no layout shift on updates; no chart flicker.
+
+
+11) EXTENSIBILITY ROADMAP
+- Real‑time subscriptions for KPIs and lists (replace mocks).
+- Drill‑downs: Dedicated screens for Batches, Shipments, QR Activity, and Blockchain Records with filters.
+- Vendor Performance Radar (optional): Per‑vendor radar like AI Analytics, scoped to vendor metrics only.
+- Export/Download: CSV/Excel endpoints with server‑side pagination.
+- Notifications: Hook in RealTimeNotifications for vendor-relevant alerts.
+
+
+12) DEPENDENCIES & VERSIONING
+- React + TypeScript
+- recharts (charts layer)
+- lucide-react (icons)
+- Global tokens: src/index.css (do not remove; theme and tokens are centralized here)
+
+
+13) APPENDIX – SAMPLE FIRESTORE QUERIES (PSEUDO)
+- KPIs current:
+  - onSnapshot(doc(db, 'vendors', vendorId, 'stats', 'current'), (snap) => setStats(snap.data()))
+- KPI trends (last 30 days):
+  - onSnapshot(query(collection(db, 'vendors', vendorId, 'metricsDaily'), orderBy('date','asc'), limit(30)), (qs) => setTrends(qs.docs.map(...)))
+- Batches list:
+  - onSnapshot(query(collection(db, 'vendors', vendorId, 'batches'), orderBy('createdAt','desc'), limit(20)), ...)
+- Shipments list:
+  - onSnapshot(query(collection(db, 'vendors', vendorId, 'shipments'), orderBy('createdAt','desc'), limit(20)), ...)
+
+
+END OF DOCUMENT

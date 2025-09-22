@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Shield, Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,6 +14,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loadingStep, setLoadingStep] = useState('');
 
   const { login } = useAuth();
 
@@ -21,104 +22,204 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setLoadingStep('Validating credentials...');
 
     try {
+      // Simulate loading steps for better UX
+      setLoadingStep('Connecting to server...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setLoadingStep('Authenticating user...');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setLoadingStep('Loading dashboard...');
       await login(email, password);
+      
+      setLoadingStep('Welcome to RailTrace!');
+      await new Promise(resolve => setTimeout(resolve, 200));
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Failed to log in');
+      setLoadingStep('');
     } finally {
       setIsLoading(false);
+      setLoadingStep('');
     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="text-center">
-        <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-            <Shield className="h-8 w-8 text-white" />
-          </div>
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900">Welcome to RailTrace</h1>
-        <p className="text-gray-600">Sign in to your account</p>
-      </CardHeader>
-
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
+    <div className="min-h-screen bg-gradient-to-br from-background-light via-blue-50/30 to-indigo-50/50 dark:from-background-dark dark:via-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md mx-auto shadow-2xl border-0 bg-card-light/95 dark:bg-card-dark/95 backdrop-blur-sm">
+        <CardHeader className="text-center pb-8">
+          {/* Logo Section */}
+          <div className="flex justify-center mb-6">
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your email"
-                required
-              />
+              <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
+                <Shield className="h-10 w-10 text-white" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-success-light dark:bg-success-dark rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your password"
-                required
-              />
+          {/* Title Section */}
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground-light dark:text-foreground-dark font-display">
+              Welcome to RailTrace
+            </h1>
+            <p className="text-subtle-light dark:text-subtle-dark">
+              Secure access to Indian Railways blockchain system
+            </p>
+          </div>
+        </CardHeader>
+
+        <CardContent className="px-8 pb-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error Message */}
+            {error && (
+              <div className="flex items-center gap-3 p-4 bg-danger-light/10 dark:bg-danger-dark/20 border border-danger-light/20 dark:border-danger-dark/20 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-danger-light dark:text-danger-dark flex-shrink-0" />
+                <p className="text-sm text-danger-light dark:text-danger-dark">{error}</p>
+              </div>
+            )}
+
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-foreground-light dark:text-foreground-dark">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-subtle-light dark:text-subtle-dark" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="w-full pl-10 pr-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark placeholder-subtle-light dark:placeholder-subtle-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-foreground-light dark:text-foreground-dark">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-subtle-light dark:text-subtle-dark" />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full pl-10 pr-12 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark placeholder-subtle-light dark:placeholder-subtle-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-subtle-light dark:text-subtle-dark hover:text-foreground-light dark:text-foreground-dark transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-primary bg-surface-light dark:bg-surface-dark border-border-light dark:border-border-dark rounded focus:ring-primary focus:ring-2"
+                />
+                <span className="text-sm text-subtle-light dark:text-subtle-dark">Remember me</span>
+              </label>
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
               >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
+                Forgot password?
               </button>
             </div>
-          </div>
 
-          <Button
-            type="submit"
-            loading={isLoading}
-            className="w-full"
-          >
-            Sign In
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
-            <button
-              onClick={onToggleMode}
-              className="text-blue-600 hover:text-blue-500 font-medium"
+            {/* Login Button */}
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Register here
-            </button>
-          </p>
-        </div>
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span className="text-sm">{loadingStep || 'Signing in...'}</span>
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
 
-        {/* Demo Credentials removed for production */}
-      </CardContent>
-    </Card>
+            {/* Loading Progress Indicator */}
+            {isLoading && loadingStep && (
+              <div className="mt-4 p-3 bg-primary/10 dark:bg-primary/20 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                  <span className="text-sm text-primary font-medium">{loadingStep}</span>
+                </div>
+                <div className="mt-2 w-full bg-primary/20 rounded-full h-1">
+                  <div className="bg-primary h-1 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border-light dark:border-border-dark"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-card-light dark:bg-card-dark text-subtle-light dark:text-subtle-dark">
+                  New to RailTrace?
+                </span>
+              </div>
+            </div>
+
+            {/* Register Link */}
+            <button
+              type="button"
+              onClick={onToggleMode}
+              className="w-full text-center py-3 px-4 border border-border-light dark:border-border-dark rounded-lg text-foreground-light dark:text-foreground-dark hover:bg-black/5 dark:hover:bg-white/5 transition-colors font-medium"
+            >
+              Create an account
+            </button>
+          </form>
+        </CardContent>
+
+        {/* Footer */}
+        <div className="px-8 pb-6">
+          <div className="text-center">
+            <p className="text-xs text-subtle-light dark:text-subtle-dark">
+              By signing in, you agree to our{' '}
+              <a href="#" className="text-primary hover:text-primary/80 transition-colors">
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="#" className="text-primary hover:text-primary/80 transition-colors">
+                Privacy Policy
+              </a>
+            </p>
+          </div>
+        </div>
+      </Card>
+    </div>
   );
 }

@@ -1,0 +1,198 @@
+INSPECTION PORTAL - UI/UX AND COMPONENT SPECIFICATION (VENDOR ROLE)
+
+Scope
+- This document defines the complete user experience, components, and graphical representations for the Vendor Inspection Portal only.
+- Backend logic, APIs, Firestore schemas, and data fetching patterns remain unchanged. This is a front-end/UI-only specification.
+- All design must follow Stitch AI’s mobile-first standards and use global tokens for typography, colors, spacing, and charts.
+
+Design Principles
+- Mobile-first: Primary target 320–428 px, scalable to tablets and desktop up to 1080 px.
+- Clarity: Minimal, information-dense cards with clear hierarchy, 8px spacing system.
+- Real-time: All lists, KPIs, and charts update via existing subscriptions without flicker.
+- Accessibility: 44px touch targets, semantic headings, WCAG AA contrast, focus-visible.
+- Internationalization: Indian languages via useLanguage context. No hardcoded strings.
+- Performance: GPU-accelerated transitions, throttled renders, no layout shift on updates.
+
+Global Tokens & Theming
+- Colors: --color-primary, --color-secondary, --color-success, --color-warning, --color-danger, --color-surface, --color-border, --color-text-primary, --color-text-secondary.
+- Charts: --chart-primary, --chart-success, --chart-warning, --chart-danger, --chart-neutral.
+- Typography: clamp-based scale for headings and body; card titles use tokenized sizes.
+- Spacing: 8px grid; xs=4, sm=8, md=12, lg=16, xl=24.
+- Radii: sm=6, md=10, lg=14, full for pills.
+
+Primary Navigation (Vendor Inspection Portal)
+- Footer Nav (persistent): Home, Batches, Shipments, QR, Profile. Active state highlighted.
+- Page Header (per screen): Title, optional back arrow, optional filter/search, actions.
+- Smooth page transitions and modal/wizard animations; no route flicker.
+
+Pages Overview
+1) Inspection Dashboard (Entry)
+2) Inspections List
+3) Inspection Details
+4) QR Activity (Inspection Context)
+5) Notifications (Inspection-context filters)
+6) My Profile (Vendor)
+
+1) Inspection Dashboard (Entry)
+Header
+- Left: Greeting (localized), small subtitle (date or shift window).
+- Right actions: Refresh (idempotent UI refresh), New Inspection (wizard trigger) if role permits.
+KPI Row (5 cards)
+- Cards: Total Inspections, Pending Reviews, Approved Inspections, Rejected/Flagged, Anomalies Detected.
+- Each card: value (dynamic), badge (trend vs. target), micro-visualization (see below), caption.
+- Real-time: Subscribe to the latest metrics document and daily aggregates.
+Micro-visualizations
+- Total Inspections: Sparkline (30 days), color --chart-primary; gradient fade to transparent.
+- Pending Reviews: Circular progress (pending/total), base track neutral; progress --chart-warning.
+- Approved Inspections: Mini bar series (last 7 days), bars in --chart-success, latest bar accented.
+- Rejected/Flagged: Mini area with negative fill in --chart-danger (soft alpha), baseline at 0.
+- Anomalies Detected: Dots-on-line (last 14 days); highlight most recent with pulsing dot.
+Charts
+- Performance Overview: LineChart (recharts) with adaptive tick density, tooltip with drill-down.
+- Defect Category Distribution: Pie/Donut chart with labels hidden at xs; legend collapsible.
+- Anomaly Timeline: Optional secondary line with shaded anomaly windows; togglable.
+Lists (Recent)
+- Recent Inspections: Card stack with status pill, truncated IDs, timestamp, quick actions.
+- Recent Flags/Anomalies: Compact list with icon and deep link to details.
+
+2) Inspections List
+Layout
+- Sticky header with title, search input (debounced), filter sheet (status/date/inspector/batch).
+- Content: Virtualized/infinite list of cards.
+Card Spec
+- Top row: Status pill (success/warn/danger/neutral), timestamp (DD/MM/YYYY HH:mm localized).
+- Middle: Inspection ID (truncate: first 5…last 4), copy button; Batch ID (truncated, copy); Location; Inspector.
+- Bottom: Actions: View (primary), Quick Approve/Reject (if role permits) as icon buttons.
+- Density: Compact on mobile, never below 44px for tappables.
+Behavior
+- Infinite scroll: Append without layout shift. Pre-fetch next page.
+- Filters: Persist for session; clear-all button.
+- Empty state: Friendly illustration + “No inspections match filters” + Reset filters CTA.
+
+3) Inspection Details
+Structure
+- Card-based sections with optional wizard tabs when content is long.
+Sections
+- Overview Card: Status, IDs (inspection, batch, related shipment), timestamps, inspector, location.
+- Progress Timeline: Vertical timeline; steps: Created → Assigned → In-Progress → Submitted → Reviewed → Approved/Rejected. Each step shows timestamp, actor, and notes.
+- Findings & Scores: Key metrics (pass rate, defect density, severity distribution bar), micro-charts inline.
+- Media & Documents: Thumbnails list; tap to preview modal; download and copy links.
+- Itemized Checks (Fitting Details): Collapsible list by category; each item shows pass/fail, severity, notes.
+- Comments & Mentions: Real-time thread with typing indicator; input supports @mentions.
+- Audit & Blockchain: Hashes displayed with SmartAddressDisplay; copy buttons; external link.
+Interactions
+- Wizard/Subpage: Tabs for Overview, Timeline, Findings, Media, Comments if vertical length is large.
+- Actions: Mark as Reviewed, Approve, Request Changes; guarded by role permissions and confirmation sheets.
+- Truncation rules: All IDs/hashes truncate after 3–5 chars, copy reveals full.
+
+4) QR Activity (Inspection Context)
+List
+- Filters: Date range, status (generated/scanned/invalid), search.
+- Cards: QR ID (trunc+copy), associated inspection/batch, last activity timestamp, count of scans.
+QR Code Details
+- Header: QR ID (trunc+copy), action to regenerate/download.
+- Overview Card: Linked entities (inspection, batch, part), current status.
+- Activity Timeline: Chronological scans with device/user attribution.
+- Documents: Attached files related to the QR event.
+- Comments: Real-time thread consistent with Inspection Details.
+QR/Barcode Generator Wizard
+- Steps: Select Material → Quantity → Type (QR/Code128/DataMatrix) → Preview → Download/Copy.
+- Multi-language and token colors; preview respects dark mode.
+
+5) Notifications
+- List of cards grouped by day; filters by type (inspection, anomaly, review), status (read/unread), search.
+- Card content: Title, small meta (source, priority), message preview, action buttons (Mark read, View).
+- Real-time subscription applies incremental updates; no reflow flicker.
+
+6) My Profile (Vendor)
+- Cards: Basic Info (editable), Company Info (read-only), Documents (upload/manage), Preferences (language, theme).
+- Sticky Save Changes button; disabled until dirty; success and error toasts localized.
+
+Component Library (Inspection Portal)
+- PageHeader: title, back, actions; supports slot for filters.
+- FooterNav: persistent; five icons with labels; safe-area insets respected.
+- StatsCard: value, label, badge, micro-viz slot (SVG/Canvas), accessible.
+- EntityCard: generic card for inspections/batches/QR; slots for meta and actions.
+- Timeline: vertical timeline with step icons, timestamp, actor, notes; expandable.
+- TruncatedText + CopyButton: standardized ID/hash display.
+- SmartAddressDisplay: truncates and copies blockchain addresses; optional external link icon.
+- RealTimeChart: Canvas-based line/area with smooth transitions and tooltips.
+- MiniCharts:
+  - Sparkline: path with gradient, hover marker, aria-description.
+  - MiniBars: compact bar series with gridless background; responsive padding.
+  - MiniArea: area with baseline and soft fill; downtrend coloring.
+  - ProgressCircle: SVG 12–16 px radius; tokenized stroke.
+- FilterSheet: modal bottom sheet with checkboxes, radios, date pickers; Apply/Reset.
+- Modal/Sheet: focus-trap, backdrop blur, escape/gesture to close, springy transitions.
+- FilePreview: image/video/pdf preview with pinch-zoom on mobile.
+- CommentThread: list with avatars (initials), timestamps, localized input with send button.
+
+State & Data Handling
+- Real-time: Keep existing onSnapshot subscriptions; UI must batch updates and defer expensive draws via startTransition.
+- Optimizations: useOptimizedRealTimeUpdates for throttling; React.memo for pure visuals; transform-gpu and will-change for animated elements.
+- Error states: Toasts with retry; inline fallbacks for charts (empty axis with hint).
+- Loading states: Skeletons that match final layout size to prevent shifts.
+
+Internationalization
+- All strings via useLanguage or i18n context; RTL readiness not required.
+- Date/time formatting localized; DD/MM/YYYY for Indian context.
+- Numbers use Indian digit grouping when locale requires.
+
+Accessibility & Compliance
+- Touch targets ≥44x44 px; label each icon with aria-label.
+- Keyboard: tabbable controls; focus-visible rings; Esc closes modals; Enter activates default action.
+- Contrast: Use token colors meeting AA; avoid text over busy gradients.
+- Motion preferences: Respect prefers-reduced-motion, disable non-essential animations.
+
+Graphical Representations (Detailed)
+- Performance Overview LineChart
+  - Data: daily inspections completed; optional target line.
+  - Interactions: long-press/hover tooltip with date/value; tap to drill to that day in Inspections List with preset filters.
+  - Scaling: auto y-domain padding; fewer ticks on xs.
+- Defect Category Donut Chart
+  - Slices: severity-weighted categories; colors from tokens; center label shows top category.
+  - Legend: collapsible; tap legend to isolate slice.
+- Anomaly Timeline MiniChart
+  - Plot: binary anomaly markers over time; sections with higher density shaded lightly.
+
+Navigation & Flows
+- From Dashboard KPIs to filtered Inspections List (e.g., tap Pending Reviews → status=pending).
+- From Inspections List card to Inspection Details; back preserves scroll and filters.
+- From QR Activity to QR Details; back returns to previous scroll position.
+- Modals (preview, generator) return focus to trigger on close.
+
+IDs, Hashes, and Copy Behavior
+- Truncation: default 5 leading/4 trailing characters (e.g., ABCDE…1234) for Inspection ID, Batch ID, QR ID, hashes.
+- Copy button copies full value; toast confirms.
+- External links open in new tab with safe noopener.
+
+Quality Gates (DoD)
+- No layout shifts during data arrival or pagination.
+- Charts and micro-viz render within 16ms budget on mid-tier phones.
+- All actions operable with touch and keyboard; labels localized.
+- Verified on 320, 375, 414, 768, 1024, 1080 widths in light/dark/high-contrast.
+- Real-time updates do not cause flicker; transitions are smooth and token-consistent.
+
+Testing Checklist
+- KPI values update when Firestore documents change (simulate via console or emulator).
+- Filters persist across navigation and refresh (within session).
+- Infinite scroll appends correctly; loading placeholders match final card sizes.
+- Truncation and copy buttons work for all IDs and hashes; toasts appear.
+- Charts adapt to container size changes; tooltips and drill-downs function.
+- Notifications reflect new inspection-related alerts in real-time; marking read updates count.
+- Profile edits: validation, disabled states, success/error toasts; language toggle reflects immediately.
+
+Roles & Permissions (Inspection Scope)
+- Vendor Inspector: Can view assigned inspections, submit findings, upload media, comment.
+- Vendor Reviewer: Can review, request changes, approve/reject inspections.
+- Vendor Manager: All above plus can start New Inspection (if enabled), manage preferences.
+- Access control enforced by existing backend flags; UI surfaces or hides actions accordingly.
+
+Implementation Notes (Front-end Only)
+- Do not alter Firestore paths or query logic; only update component structure and styling.
+- Reuse existing utility components (SmartAddressDisplay, CopyButton, RealTimeChart, CommentThread).
+- Keep component names and props stable to avoid breaking imports.
+- Prefer CSS variables and Tailwind utility tokens over hardcoded styles.
+
+Change Log (to be maintained during implementation)
+- 0.1 Initial specification authored for Inspection Portal (UI/UX, components, charts, flows).

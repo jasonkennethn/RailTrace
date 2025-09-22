@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { StatsCard } from './StatsCard';
 import { 
   Package, 
-  QrCode, 
-  Shield, 
-  TrendingUp, 
   Clock, 
   CheckCircle, 
   AlertTriangle,
   Truck,
-  BarChart3,
-  Eye
+  Eye,
+  Plus,
+  Filter,
+  Download,
+  RefreshCw,
+  Maximize2,
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -23,15 +23,16 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell
 } from 'recharts';
 import { useAuth } from '../../hooks/useAuth';
+import VendorFooterNav from '../VendorPages/VendorFooterNav';
+import { vendorDataService } from '../../services/vendorDataService';
+import { Modal } from '../ui/Modal';
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+const COLORS = ['var(--color-primary)', 'var(--chart-success)', 'var(--chart-warning)', 'var(--chart-danger)', 'var(--color-accent)'];
 
 interface VendorStats {
   totalBatches: number;
@@ -48,21 +49,21 @@ interface BatchData {
   quantity: number;
   status: 'manufacturing' | 'ready' | 'shipped' | 'delivered';
   createdAt: Date;
-  blockchainHash?: string;
+  expectedDelivery: Date;
 }
 
 interface ShipmentData {
   id: string;
   batchId: string;
-  depotId: string;
+  destination: string;
   status: 'pending' | 'in_transit' | 'delivered';
   trackingNumber: string;
-  estimatedDelivery: Date;
-  actualDelivery?: Date;
+  createdAt: Date;
 }
 
 export function VendorDashboard() {
   const { userData } = useAuth();
+  const vendorId = (userData as any)?.vendorId || (userData as any)?.uid || 'default';
   const [stats, setStats] = useState<VendorStats>({
     totalBatches: 0,
     pendingShipments: 0,
@@ -70,296 +71,500 @@ export function VendorDashboard() {
     qrCodesGenerated: 0,
     blockchainRecords: 0
   });
-  const [recentBatches, setRecentBatches] = useState<BatchData[]>([]);
+  const [batches, setBatches] = useState<BatchData[]>([]);
   const [shipments, setShipments] = useState<ShipmentData[]>([]);
-  const [performanceData, setPerformanceData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTimeRange, setSelectedTimeRange] = useState('30d');
+  type PerformancePoint = { label: string; batches?: number; shipments?: number; quality?: number };
+  const [performanceData, setPerformanceData] = useState<PerformancePoint[]>([]);
+  const [fittingTypeData, setFittingTypeData] = useState<Array<{ name: string; value: number; count?: number }>>([]);
+
+  // Full-screen performance modal
+  const [perfOpen, setPerfOpen] = useState(false);
+
+  // Stitch-style fallback datasets (used only when live arrays are empty)
+  const fallbackPerformanceData: PerformancePoint[] = [
+    { label: 'D1', batches: 12, shipments: 8 },
+    { label: 'D2', batches: 15, shipments: 10 },
+    { label: 'D3', batches: 9, shipments: 7 },
+    { label: 'D4', batches: 18, shipments: 12 },
+    { label: 'D5', batches: 20, shipments: 14 },
+    { label: 'D6', batches: 16, shipments: 11 },
+    { label: 'D7', batches: 22, shipments: 15 },
+    { label: 'D8', batches: 19, shipments: 13 },
+    { label: 'D9', batches: 24, shipments: 16 },
+    { label: 'D10', batches: 21, shipments: 15 },
+  ];
+
+  const fallbackBatches: BatchData[] = [
+    {
+      id: 'fallback-b-12345',
+      batchNumber: 'B-12345',
+      fittingType: 'Elastic Rail Clips',
+      quantity: 50000,
+      status: 'delivered',
+      createdAt: new Date(),
+      expectedDelivery: new Date(),
+    },
+    {
+      id: 'fallback-b-67890',
+      batchNumber: 'B-67890',
+      fittingType: 'Grooved Rubber Soleplates',
+      quantity: 30000,
+      status: 'ready',
+      createdAt: new Date(),
+      expectedDelivery: new Date(),
+    },
+  ];
+
+  const fallbackShipments: ShipmentData[] = [
+    {
+      id: 'fallback-s-11223',
+      batchId: 'B-12345',
+      destination: 'Mumbai CSMT',
+      status: 'in_transit',
+      trackingNumber: 'S-11223',
+      createdAt: new Date(),
+    },
+    {
+      id: 'fallback-s-44556',
+      batchId: 'B-67890',
+      destination: 'New Delhi NDLS',
+      status: 'pending',
+      trackingNumber: 'S-44556',
+      createdAt: new Date(),
+    },
+  ];
 
   useEffect(() => {
-    loadVendorData();
-    // Set up real-time updates
-    const interval = setInterval(loadVendorData, 30000); // Update every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
+    const unsubscribers: Array<() => void> = [];
 
-  const loadVendorData = async () => {
-    setIsLoading(true);
-    try {
-      // Simulate loading vendor data
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock data - in real app, fetch from Firestore/API
-      const mockStats: VendorStats = {
-        totalBatches: 24,
-        pendingShipments: 3,
-        completedShipments: 18,
-        qrCodesGenerated: 1247,
-        blockchainRecords: 1247
-      };
+    unsubscribers.push(
+      vendorDataService.subscribeStats(vendorId, (s) => setStats(s))
+    );
 
-      const mockBatches: BatchData[] = [
-        {
-          id: '1',
-          batchNumber: 'BATCH-2024-001',
-          fittingType: 'Clips',
-          quantity: 500,
-          status: 'ready',
-          createdAt: new Date(),
-          blockchainHash: '0x1234...'
-        },
-        {
-          id: '2',
-          batchNumber: 'BATCH-2024-002',
-          fittingType: 'Pads',
-          quantity: 300,
-          status: 'manufacturing',
-          createdAt: new Date(Date.now() - 3600000)
-        },
-        {
-          id: '3',
-          batchNumber: 'BATCH-2024-003',
-          fittingType: 'Liners',
-          quantity: 200,
-          status: 'shipped',
-          createdAt: new Date(Date.now() - 7200000),
-          blockchainHash: '0x5678...'
-        }
-      ];
+    unsubscribers.push(
+      vendorDataService.subscribeBatches(vendorId, (rows) => {
+        const mapped: BatchData[] = rows.map((r: any) => ({
+          ...r,
+          createdAt: r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt ? new Date(r.createdAt) : new Date()),
+          expectedDelivery: r.expectedDelivery?.toDate ? r.expectedDelivery.toDate() : (r.expectedDelivery ? new Date(r.expectedDelivery) : new Date())
+        }));
+        setBatches(mapped);
+      })
+    );
 
-      const mockShipments: ShipmentData[] = [
-        {
-          id: '1',
-          batchId: 'BATCH-2024-001',
-          depotId: 'DEPOT-001',
-          status: 'in_transit',
-          trackingNumber: 'TRK-001',
-          estimatedDelivery: new Date(Date.now() + 86400000)
-        },
-        {
-          id: '2',
-          batchId: 'BATCH-2024-003',
-          depotId: 'DEPOT-002',
-          status: 'delivered',
-          trackingNumber: 'TRK-002',
-          estimatedDelivery: new Date(Date.now() - 86400000),
-          actualDelivery: new Date(Date.now() - 3600000)
-        }
-      ];
+    unsubscribers.push(
+      vendorDataService.subscribeShipments(vendorId, (rows) => {
+        const mapped: ShipmentData[] = rows.map((r: any) => ({
+          ...r,
+          createdAt: r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt ? new Date(r.createdAt) : new Date())
+        }));
+        setShipments(mapped);
+      })
+    );
 
-      const mockPerformanceData = [
-        { month: 'Jan', batches: 8, shipments: 6 },
-        { month: 'Feb', batches: 12, shipments: 10 },
-        { month: 'Mar', batches: 15, shipments: 12 },
-        { month: 'Apr', batches: 18, shipments: 15 },
-        { month: 'May', batches: 22, shipments: 18 },
-        { month: 'Jun', batches: 24, shipments: 21 }
-      ];
+    unsubscribers.push(
+      vendorDataService.subscribePerformance(vendorId, (rows) => setPerformanceData(rows))
+    );
 
-      setStats(mockStats);
-      setRecentBatches(mockBatches);
-      setShipments(mockShipments);
-      setPerformanceData(mockPerformanceData);
-    } catch (error) {
-      console.error('Error loading vendor data:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    unsubscribers.push(
+      vendorDataService.subscribeFittingTypes(vendorId, (rows) => setFittingTypeData(rows))
+    );
+
+    return () => {
+      unsubscribers.forEach((u) => u && u());
+    };
+  }, [vendorId]);
+
+  // Filter by fitting type (pie interaction)
+  const [selectedFitting, setSelectedFitting] = useState<string | null>(null);
+  const handleSliceClick = (name: string) => setSelectedFitting((cur) => (cur === name ? null : name));
+
+  // Infinite scroll for lists (client-side windowing)
+  const [batchLimit, setBatchLimit] = useState(10);
+  const [shipmentLimit, setShipmentLimit] = useState(10);
+  const loadMoreBatches = useCallback(() => setBatchLimit((n) => n + 10), []);
+  const loadMoreShipments = useCallback(() => setShipmentLimit((n) => n + 10), []);
+
+  const filteredBatches = useMemo(() => {
+    const all = batches.length > 0 ? batches : fallbackBatches;
+    return selectedFitting ? all.filter(b => (b.fittingType || '').toLowerCase().includes(selectedFitting.toLowerCase())) : all;
+  }, [batches, fallbackBatches, selectedFitting]);
+
+  const visibleBatches = filteredBatches.slice(0, batchLimit);
+  const allShipments = shipments.length > 0 ? shipments : fallbackShipments;
+  const visibleShipments = allShipments.slice(0, shipmentLimit);
+
+  const hasLiveKpis = stats.totalBatches || stats.pendingShipments || stats.completedShipments || stats.qrCodesGenerated || stats.blockchainRecords;
+  const kpi = hasLiveKpis ? stats : {
+    totalBatches: 123,
+    pendingShipments: 45,
+    completedShipments: 78,
+    qrCodesGenerated: 901,
+    blockchainRecords: 234,
+  } as VendorStats;
+
+  const chartData: PerformancePoint[] = performanceData.length > 0 ? performanceData : fallbackPerformanceData;
+
+  // KPI micro-visualizations helpers
+  const batchesSpark = useMemo(() => chartData.map(d => d.batches ?? 0), [chartData]);
+  const shipmentsTrend = useMemo(() => chartData.map(d => d.shipments ?? 0), [chartData]);
+  const totalShipments = stats.pendingShipments + stats.completedShipments;
+  const pendingRatio = totalShipments > 0 ? (stats.pendingShipments / totalShipments) : 0;
+  const completedBars = shipmentsTrend.slice(-6); // recent small bars
+
+  const buildSparkPath = (values: number[], width = 80, height = 24) => {
+    if (values.length === 0) return '';
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = Math.max(1, max - min);
+    const stepX = width / Math.max(1, values.length - 1);
+    return values.map((v, i) => {
+      const x = i * stepX;
+      const y = height - ((v - min) / span) * height;
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`;
+    }).join(' ');
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'manufacturing':
-        return <Badge variant="warning">Manufacturing</Badge>;
-      case 'ready':
-        return <Badge variant="info">Ready</Badge>;
-      case 'shipped':
-        return <Badge variant="success">Shipped</Badge>;
-      case 'delivered':
-        return <Badge variant="success">Delivered</Badge>;
-      case 'pending':
-        return <Badge variant="warning">Pending</Badge>;
-      case 'in_transit':
-        return <Badge variant="info">In Transit</Badge>;
-      default:
-        return <Badge variant="default">{status}</Badge>;
-    }
+  const scrollToAnchor = (anchorId: string) => {
+    const el = document.getElementById(anchorId);
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 72;
+    window.scrollTo({ top, behavior: 'smooth' });
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Vendor Dashboard</h2>
-        <p className="text-gray-600 mt-1">Welcome back, {userData?.name}! Manage your batches and track shipments</p>
+    <div className="vendor-scope min-h-screen pb-20" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+      {/* Header */}
+      <div className="sticky top-0 z-20 border-b backdrop-blur-sm" style={{ backgroundColor: 'color-mix(in oklab, var(--color-card) 90%, transparent)', borderColor: 'var(--color-border)' }}>
+        <div className="px-4 pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>RailTrace</h1>
+            <div className="flex items-center gap-2">
+              <button aria-label="Refresh" className="flex h-10 w-10 items-center justify-center rounded-full touch-target transition-colors" style={{ color: 'var(--color-text-secondary)' }}>
+                <RefreshCw className="h-5 w-5" />
+              </button>
+              <button aria-label="New Batch" className="flex h-10 w-10 items-center justify-center rounded-full touch-target text-white" style={{ backgroundColor: 'var(--color-primary)' }}>
+                <Plus className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          <h2 className="mt-4 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Namaste, {userData?.name || 'Vendor'}</h2>
+        </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <StatsCard
-          title="Total Batches"
-          value={stats.totalBatches}
-          subtitle="All time"
-          icon={<Package className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Pending Shipments"
-          value={stats.pendingShipments}
-          subtitle="Awaiting delivery"
-          icon={<Truck className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Completed"
-          value={stats.completedShipments}
-          subtitle="Delivered successfully"
-          icon={<CheckCircle className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="QR Codes"
-          value={stats.qrCodesGenerated}
-          subtitle="Generated"
-          icon={<QrCode className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Blockchain Records"
-          value={stats.blockchainRecords}
-          subtitle="Verified transactions"
-          icon={<Shield className="h-6 w-6" />}
-        />
-      </div>
+      <div className="p-4 space-y-6">
+        {/* KPI with micro-visualizations */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 3xl:grid-cols-5">
+          {/* Total Batches - sparkline */}
+          <button onClick={() => scrollToAnchor('recent-batches')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }}>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Total Batches</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.totalBatches.toString()}</p>
+            </div>
+            <svg width="100%" height="24" viewBox="0 0 80 24" preserveAspectRatio="none">
+              <path d={buildSparkPath(batchesSpark)} fill="none" stroke="var(--chart-primary)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            </svg>
+          </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Pending Shipments - donut progress */}
+          <button onClick={() => scrollToAnchor('recent-shipments')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }}>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Pending Shipments</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.pendingShipments}</p>
+            </div>
+            <svg width="56" height="56" viewBox="0 0 36 36" className="mt-1">
+              <circle cx="18" cy="18" r="16" fill="none" stroke="color-mix(in srgb, var(--color-text-secondary) 20%, transparent)" strokeWidth="4" />
+              <circle cx="18" cy="18" r="16" fill="none" stroke="var(--chart-warning)" strokeWidth="4" strokeDasharray={`${Math.max(2, Math.round(pendingRatio * 100))} ${100 - Math.max(2, Math.round(pendingRatio * 100))}`} strokeDashoffset="25" pathLength="100" />
+            </svg>
+          </button>
+
+          {/* Completed - mini bars */}
+          <button onClick={() => scrollToAnchor('recent-shipments')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }}>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Completed</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.completedShipments}</p>
+            </div>
+            <div className="flex items-end gap-1 h-6 mt-1">
+              {completedBars.map((v, i) => {
+                const max = Math.max(1, ...completedBars);
+                const h = Math.max(2, Math.round((v / max) * 24));
+                return <div key={i} style={{ width: 6, height: h, backgroundColor: 'var(--chart-success)' }} />;
+              })}
+            </div>
+          </button>
+
+          {/* QR Codes Generated - sparkline (reuse batches trend as proxy if QR trend not available) */}
+          <button className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }}>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>QR Generated</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.qrCodesGenerated}</p>
+            </div>
+            <svg width="100%" height="24" viewBox="0 0 80 24" preserveAspectRatio="none">
+              <path d={buildSparkPath(batchesSpark)} fill="none" stroke="var(--chart-success)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            </svg>
+          </button>
+
+          {/* Blockchain Records - donut ring (assume all confirmed if no split provided) */}
+          <button className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95 md:col-span-1 col-span-2" style={{ backgroundColor: 'var(--color-card)' }}>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Blockchain Records</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.blockchainRecords}</p>
+            </div>
+            <svg width="56" height="56" viewBox="0 0 36 36" className="mt-1">
+              <circle cx="18" cy="18" r="16" fill="none" stroke="color-mix(in srgb, var(--color-text-secondary) 20%, transparent)" strokeWidth="4" />
+              <circle cx="18" cy="18" r="16" fill="none" stroke="var(--chart-primary)" strokeWidth="4" strokeDasharray={`100 0`} strokeDashoffset="0" pathLength="100" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Performance Chart */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h3 id="performance-overview" className="text-lg font-semibold text-foreground-light dark:text-foreground-dark">Performance Overview</h3>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedTimeRange}
+                    onChange={(e) => setSelectedTimeRange(e.target.value)}
+                    className="text-sm border border-border-light dark:border-border-dark rounded-lg px-3 py-1 bg-surface-light dark:bg-surface-dark text-content-light dark:text-content-dark"
+                  >
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                  </select>
+                  <Button variant="outline" size="sm" onClick={() => setPerfOpen(true)} aria-label="Expand">
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="batches" stroke="var(--chart-primary)" strokeWidth={2} name="Batches" />
+                    <Line type="monotone" dataKey="shipments" stroke="var(--chart-success)" strokeWidth={2} name="Shipments" />
+                    {chartData.some(d => typeof d.quality === 'number') && (
+                      <Line type="monotone" dataKey="quality" stroke="var(--chart-warning)" strokeWidth={2} name="Quality %" />
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Fitting Types Distribution */}
+          <Card>
+            <CardHeader>
+              <h3 id="fitting-types" className="text-lg font-semibold text-foreground-light dark:text-foreground-dark">Fitting Types Distribution</h3>
+            </CardHeader>
+            <CardContent>
+              {fittingTypeData.length === 0 ? (
+                <div className="h-80 flex items-center justify-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>No fitting distribution data</div>
+              ) : (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={fittingTypeData} cx="50%" cy="50%" outerRadius={80} dataKey="value" onClick={(data) => handleSliceClick((data as any).name)}>
+                        {fittingTypeData.map((item, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length] as any} opacity={selectedFitting && selectedFitting !== item.name ? 0.5 : 1} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Recent Batches */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Package className="h-5 w-5 text-blue-600" />
-                Recent Batches
-              </h3>
-              <Button variant="outline" size="sm">
-                View All
-              </Button>
+              <h3 id="recent-batches" className="text-lg font-semibold text-[#0d1117] dark:text-[#c9d1d9]">Recent Batches</h3>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="border-[#d0d7de] dark:border-[#30363d] text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#0d1117]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+                <Button variant="outline" size="sm" className="border-[#d0d7de] dark:border-[#30363d] text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#0d1117]">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
-                <p className="text-gray-600">Loading batches...</p>
+            {visibleBatches.length === 0 ? (
+              <div className="space-y-3">
+                <div className="h-16 rounded-lg animate-pulse" style={{ backgroundColor: 'color-mix(in srgb, var(--color-text-secondary) 10%, transparent)' }} />
+                <div className="h-16 rounded-lg animate-pulse" style={{ backgroundColor: 'color-mix(in srgb, var(--color-text-secondary) 10%, transparent)' }} />
               </div>
             ) : (
               <div className="space-y-4">
-                {recentBatches.map((batch) => (
-                  <div key={batch.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium text-gray-900">{batch.batchNumber}</h4>
-                        {getStatusBadge(batch.status)}
+                {visibleBatches.map((batch) => (
+                  <div
+                    key={batch.id}
+                    className="flex items-center justify-between p-4 bg-[#f0f2f5] dark:bg-[#0d1117] rounded-lg border border-[#d0d7de] dark:border-[#30363d]"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-[#1773cf]/10 rounded-lg flex items-center justify-center">
+                        <Package className="h-6 w-6 text-[#1773cf]" />
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span>{batch.fittingType}</span>
-                        <span>•</span>
-                        <span>{batch.quantity} units</span>
-                        <span>•</span>
-                        <span>{batch.createdAt.toLocaleDateString()}</span>
+                      <div>
+                        <h4 className="font-semibold text-[#0d1117] dark:text-[#c9d1d9]">
+                          {batch.batchNumber}
+                        </h4>
+                        <p className="text-sm text-[#57606a] dark:text-[#8b949e]">
+                          {batch.fittingType} • {batch.quantity} units
+                        </p>
+                        <p className="text-xs text-[#57606a] dark:text-[#8b949e]">
+                          Created: {batch.createdAt.toLocaleDateString()}
+                        </p>
                       </div>
-                      {batch.blockchainHash && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Shield className="h-3 w-3 text-green-600" />
-                          <span className="text-xs text-green-600">Blockchain verified</span>
-                        </div>
-                      )}
                     </div>
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center space-x-3">
+                      <Badge className={(() => {
+                        switch (batch.status) {
+                          case 'manufacturing': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+                          case 'ready': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
+                          case 'shipped': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
+                          case 'delivered': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+                          default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
+                        }
+                      })()}>
+                        <div className="flex items-center gap-1">
+                          {(() => {
+                            switch (batch.status) {
+                              case 'manufacturing': return <Clock className="h-4 w-4" />;
+                              case 'ready': return <CheckCircle className="h-4 w-4" />;
+                              case 'shipped': return <Truck className="h-4 w-4" />;
+                              case 'delivered': return <CheckCircle className="h-4 w-4" />;
+                              default: return <AlertTriangle className="h-4 w-4" />;
+                            }
+                          })()}
+                          {batch.status.replace('_', ' ')}
+                        </div>
+                      </Badge>
+                      <Button variant="outline" size="sm" className="border-[#d0d7de] dark:border-[#30363d] text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#0d1117]">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
+                {filteredBatches.length > visibleBatches.length && (
+                  <div className="flex justify-center">
+                    <Button variant="outline" size="sm" onClick={loadMoreBatches}>Load more</Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Shipment Tracking */}
+        {/* Recent Shipments */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Truck className="h-5 w-5 text-blue-600" />
-                Shipment Tracking
-              </h3>
-              <Button variant="outline" size="sm">
-                Track All
-              </Button>
-            </div>
+            <h3 id="recent-shipments" className="text-lg font-semibold text-foreground-light dark:text-foreground-dark">Recent Shipments</h3>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {shipments.map((shipment) => (
-                <div key={shipment.id} className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-900">{shipment.trackingNumber}</span>
-                    {getStatusBadge(shipment.status)}
-                  </div>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>Batch: {shipment.batchId}</div>
-                    <div>Depot: {shipment.depotId}</div>
-                    <div>
-                      {shipment.status === 'delivered' 
-                        ? `Delivered: ${shipment.actualDelivery?.toLocaleDateString()}`
-                        : `ETA: ${shipment.estimatedDelivery.toLocaleDateString()}`
-                      }
+            {visibleShipments.length === 0 ? (
+              <div className="space-y-3">
+                <div className="h-16 rounded-lg animate-pulse" style={{ backgroundColor: 'color-mix(in srgb, var(--color-text-secondary) 10%, transparent)' }} />
+                <div className="h-16 rounded-lg animate-pulse" style={{ backgroundColor: 'color-mix(in srgb, var(--color-text-secondary) 10%, transparent)' }} />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {visibleShipments.map((shipment) => (
+                  <div
+                    key={shipment.id}
+                    className="flex items-center justify-between p-4 bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Truck className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground-light dark:text-foreground-dark">
+                          {shipment.trackingNumber}
+                        </h4>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                          {shipment.destination} • Batch: {shipment.batchId}
+                        </p>
+                        <p className="text-xs text-subtle-light dark:text-subtle-dark">
+                          Created: {shipment.createdAt.toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Badge className={(() => {
+                        switch (shipment.status) {
+                          case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+                          case 'in_transit': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
+                          case 'delivered': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+                          default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
+                        }
+                      })()}>
+                        <div className="flex items-center gap-1">
+                          {(() => {
+                            switch (shipment.status) {
+                              case 'pending': return <Clock className="h-4 w-4" />;
+                              case 'in_transit': return <Truck className="h-4 w-4" />;
+                              case 'delivered': return <CheckCircle className="h-4 w-4" />;
+                              default: return <AlertTriangle className="h-4 w-4" />;
+                            }
+                          })()}
+                          {shipment.status.replace('_', ' ')}
+                        </div>
+                      </Badge>
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+                {allShipments.length > visibleShipments.length && (
+                  <div className="flex justify-center">
+                    <Button variant="outline" size="sm" onClick={loadMoreShipments}>Load more</Button>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Performance Chart */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-            Performance Trends
-          </h3>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={performanceData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="batches" stroke="#3B82F6" strokeWidth={3} name="Batches" />
-              <Line type="monotone" dataKey="shipments" stroke="#10B981" strokeWidth={3} name="Shipments" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button className="justify-start" leftIcon={<QrCode className="h-4 w-4" />}>
-              Generate QR Codes
-            </Button>
-            <Button variant="outline" className="justify-start" leftIcon={<Package className="h-4 w-4" />}>
-              Create New Batch
-            </Button>
-            <Button variant="outline" className="justify-start" leftIcon={<Shield className="h-4 w-4" />}>
-              View Blockchain Records
-            </Button>
+      {/* Full-screen performance modal */}
+      <Modal isOpen={perfOpen} onClose={() => setPerfOpen(false)}>
+        <div className="p-2" style={{ backgroundColor: 'var(--color-card)' }}>
+          <div className="h-[70vh]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 16, right: 8, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="batches" stroke="var(--chart-primary)" strokeWidth={2} name="Batches" />
+                <Line type="monotone" dataKey="shipments" stroke="var(--chart-success)" strokeWidth={2} name="Shipments" />
+                {chartData.some(d => typeof d.quality === 'number') && (
+                  <Line type="monotone" dataKey="quality" stroke="var(--chart-warning)" strokeWidth={2} name="Quality %" />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Modal>
+
+      <VendorFooterNav active="home" />
     </div>
   );
 }
-
-

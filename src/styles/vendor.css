@@ -1,0 +1,49 @@
+.vendor-scope {
+  /* Stitch AI palette */
+  --color-primary: #1773cf;
+  --color-bg-primary: #f6f7f8;
+  --color-bg-secondary: #ffffff;
+  --color-card: #ffffff;
+  --color-border: rgba(0,0,0,0.12);
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-icon-inactive: #9aa5b1;
+
+  /* Chart accents (kept semantic) */
+  --chart-primary: #1773cf;
+  --chart-success: #22c55e;
+  --chart-warning: #f59e0b;
+  --chart-danger: #ef4444;
+
+  /* Radius to match Stitch */
+  --radius-default: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  font-family: "Public Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.dark .vendor-scope {
+  --color-bg-primary: #111921;
+  --color-bg-secondary: rgba(31,41,55,0.5);
+  --color-card: rgba(31,41,55,0.5);
+  --color-border: rgba(255,255,255,0.08);
+  --color-text-primary: #e5e7eb;
+  --color-text-secondary: #94a3b8;
+  --color-icon-inactive: #94a3b8;
+}
+
+/* High-contrast friendly borders on cards inside scope */
+.vendor-scope .border-token { border-color: var(--color-border) !important; }
+.vendor-scope .touch-target { min-width: 44px; min-height: 44px; }
+
+/* Ensure inputs/buttons inherit font and colors */
+.vendor-scope input,
+.vendor-scope select,
+.vendor-scope textarea,
+.vendor-scope button { font-family: inherit; }
+
+/* Smooth anchor scrolling alignment (sections already offset in JS) */
+.vendor-scope [id] { scroll-margin-top: 80px; }
+
+

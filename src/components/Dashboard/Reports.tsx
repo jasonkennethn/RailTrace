@@ -1,39 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
+  QrCode, 
+  RefreshCw, 
+  Wrench, 
+  CheckCircle, 
+  Construction,
   FileText, 
-  Download, 
-  BarChart3,
-  TrendingUp,
+  X,
+  Calendar,
+  QrCode as QrCode2,
   AlertTriangle,
-  CheckCircle,
+  Download,
+  MapPin,
   Clock,
-  RefreshCw,
-  Activity
+  Eye,
+  ChevronRight
 } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '../ui/Card';
-import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
-import { TruncatedText } from '../ui/TruncatedText';
-import { ReportCard } from '../ui/ReportCard';
-import { StatsCard } from './StatsCard';
-import { 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
-  LineChart,
-  Line
-} from 'recharts';
-import { collection, query, orderBy, limit, onSnapshot, getDocs, where, Timestamp } from 'firebase/firestore';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { collection, onSnapshot, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { RealTimeChart } from '../ui/RealTimeChart';
 
 interface ReportData {
   id: string;
@@ -44,13 +30,6 @@ interface ReportData {
   period: string;
   status: 'ready' | 'generating' | 'failed';
   downloadUrl?: string;
-}
-
-interface ReportMetrics {
-  totalReports: number;
-  readyReports: number;
-  generatingReports: number;
-  failedReports: number;
 }
 
 interface RealTimeData {
@@ -65,27 +44,35 @@ interface RealTimeData {
   lastUpdate: Date;
 }
 
-interface MonthlyData {
-  month: string;
-  passed: number;
-  failed: number;
-  pending: number;
-  registered: number;
-  installed: number;
-  retired: number;
+interface PartDetails {
+  id: string;
+  qrCode: string;
+  partType: string;
+  vendor: string;
+  lotNumber: string;
+  manufactureDate: string;
+  supplyDate: string;
+  warranty: string;
+  batchId: string;
+  serialNumber: string;
+  poNumber: string;
+  currentStatus: string;
+  statusColor: string;
+  events: Array<{
+    id: string;
+    title: string;
+    timestamp: string;
+    description: string;
+    icon: string;
+    transactionId?: string;
+    attachment?: string;
+  }>;
 }
 
 export function Reports() {
-  const [reports, setReports] = useState<ReportData[]>([]);
-  const [metrics, setMetrics] = useState<ReportMetrics>({
-    totalReports: 0,
-    readyReports: 0,
-    generatingReports: 0,
-    failedReports: 0
-  });
+  const { t } = useLanguage();
+  const [, setReports] = useState<ReportData[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState('30d');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [realTimeData, setRealTimeData] = useState<RealTimeData>({
     totalTransactions: 0,
     inspectionsPassed: 0,
@@ -97,200 +84,251 @@ export function Reports() {
     partsRetired: 0,
     lastUpdate: new Date()
   });
-  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState(new Date());
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [selectedPart, setSelectedPart] = useState<PartDetails | null>(null);
+  const [showPartModal, setShowPartModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportType, setReportType] = useState('');
+  const [activeFilter, setActiveFilter] = useState('Total Parts');
+  const [dateRange, setDateRange] = useState('2023-10-01 to 2023-10-31');
+  const [reportFormat, setReportFormat] = useState('json');
 
-  // Helpers: mobile-first key:value rendering
-  const KeyValueRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="flex items-start justify-between gap-3 py-1">
-      <span className="text-[12px] sm:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">{label}</span>
-      <span className="text-[12px] sm:text-sm text-gray-900 font-medium break-words text-right w-full">{value}</span>
-    </div>
-  );
+  // Section refs for smooth scroll
+  const vendorsSectionRef = useRef<HTMLDivElement | null>(null);
+  const inspectionsSectionRef = useRef<HTMLDivElement | null>(null);
+  const failureSectionRef = useRef<HTMLDivElement | null>(null);
+  const partsSectionRef = useRef<HTMLDivElement | null>(null);
 
-  const renderNestedObject = (obj: Record<string, any>) => {
-    if (!obj || typeof obj !== 'object') return null;
-    const entries = Object.entries(obj);
-    if (entries.length === 0) return null;
-    return (
-      <div className="rounded-md border border-gray-200 bg-gray-50 p-2 sm:p-3 space-y-1">
-        {entries.map(([k, v]) => (
-          <KeyValueRow
-            key={k}
-            label={k}
-            value={typeof v === 'object' && v !== null ? (
-              <span className="font-mono text-[11px] sm:text-xs break-words">{JSON.stringify(v)}</span>
-            ) : (
-              <span className="break-words">{String(v)}</span>
-            )}
-          />
-        ))}
-      </div>
-    );
+  const scrollTo = (ref: React.RefObject<HTMLDivElement>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Enhanced mock data for charts
-  const [inspectionData] = useState([
-    { month: 'Jan', passed: 45, failed: 5, pending: 10, registered: 20, installed: 18, retired: 2 },
-    { month: 'Feb', passed: 52, failed: 3, pending: 8, registered: 25, installed: 22, retired: 3 },
-    { month: 'Mar', passed: 48, failed: 7, pending: 12, registered: 30, installed: 28, retired: 4 },
-    { month: 'Apr', passed: 55, failed: 2, pending: 6, registered: 28, installed: 26, retired: 5 },
-    { month: 'May', passed: 58, failed: 4, pending: 9, registered: 32, installed: 30, retired: 6 },
-    { month: 'Jun', passed: 62, failed: 1, pending: 5, registered: 35, installed: 33, retired: 7 }
-  ]);
+  // Micro-viz data
+  const [vendorsCompliant, setVendorsCompliant] = useState(0);
+  const [vendorsFlagged, setVendorsFlagged] = useState(0);
+  const [partsTrend, setPartsTrend] = useState<number[]>([]); // last 30 days totals
+  const [failureTrend, setFailureTrend] = useState<number[]>([]); // last 30 days failureRate
 
-  const [vendorPerformanceData] = useState([
-    { name: 'SteelWorks Ltd', score: 95, defects: 2, deliveries: 45, parts: 120, quality: 'Excellent' },
-    { name: 'RailTech Corp', score: 87, defects: 5, deliveries: 38, parts: 95, quality: 'Good' },
-    { name: 'MetalCraft Inc', score: 92, defects: 3, deliveries: 42, parts: 110, quality: 'Very Good' },
-    { name: 'IronBridge Co', score: 78, defects: 8, deliveries: 35, parts: 85, quality: 'Fair' },
-    { name: 'Precision Parts', score: 89, defects: 4, deliveries: 40, parts: 100, quality: 'Good' },
-    { name: 'Quality Steel', score: 94, defects: 1, deliveries: 48, parts: 125, quality: 'Excellent' }
-  ]);
-
-  const [fittingDistributionData] = useState([
-    { name: 'Clips', value: 35, color: '#3B82F6', count: 245 },
-    { name: 'Pads', value: 25, color: '#10B981', count: 175 },
-    { name: 'Liners', value: 20, color: '#F59E0B', count: 140 },
-    { name: 'Sleepers', value: 15, color: '#EF4444', count: 105 },
-    { name: 'Fasteners', value: 5, color: '#8B5CF6', count: 35 }
-  ]);
-
-  useEffect(() => {
-    loadReports();
-    setupRealTimeUpdates();
-    loadMonthlyData();
-  }, []);
-
-  const setupRealTimeUpdates = () => {
-    const q = query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(50));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const transactions = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
-        };
-      });
-
-      // Process real-time data
-      const processedData = processRealTimeData(transactions);
-      setRealTimeData(processedData);
-      // Keep a slim recent list for UI cards
-      setRecentTransactions(transactions.slice(0, 20));
-      setLastUpdate(new Date());
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+  // Report generation functions
+  const handleGenerateReport = (type: string) => {
+    setReportType(type);
+    setShowReportModal(true);
   };
 
-  const processRealTimeData = (transactions: any[]): RealTimeData => {
-    const inspections = transactions.filter(t => t.eventType === 'inspected');
-    const registered = transactions.filter(t => t.eventType === 'registered');
-    const installed = transactions.filter(t => t.eventType === 'installed');
-    const retired = transactions.filter(t => t.eventType === 'retired');
-    
-    const inspectionsPassed = inspections.filter(i => i.data?.resultCode === 0).length;
-    const inspectionsFailed = inspections.filter(i => i.data?.resultCode === 1).length;
-    const inspectionsPending = inspections.filter(i => i.data?.resultCode === 2).length;
-    
-    const uniqueVendors = new Set(registered.map(r => r.data?.vendorId).filter(Boolean));
-    
-    return {
-      totalTransactions: transactions.length,
-      inspectionsPassed,
-      inspectionsFailed,
-      inspectionsPending,
-      vendorsActive: uniqueVendors.size,
-      partsRegistered: registered.length,
-      partsInstalled: installed.length,
-      partsRetired: retired.length,
-      lastUpdate: new Date()
-    };
-  };
-
-  const loadMonthlyData = async () => {
+  const generateReport = async (type: string) => {
+    setIsGenerating(true);
     try {
-      // Get last 6 months of data
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      // Simulate report generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const q = query(
-        collection(db, 'transactions'),
-        where('createdAt', '>=', Timestamp.fromDate(sixMonthsAgo)),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const snapshot = await getDocs(q);
-      const transactions: any[] = snapshot.docs.map(doc => {
-        const data: any = doc.data();
-        return {
-          ...data,
-          createdAt: data?.createdAt?.toDate ? data.createdAt.toDate() : new Date(data?.createdAt)
-        } as any;
-      });
-
-      // Group by month
-      const monthlyGroups: { [key: string]: any } = {};
-      
-      transactions.forEach((transaction: any) => {
-        const month = transaction.createdAt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        if (!monthlyGroups[month]) {
-          monthlyGroups[month] = {
-            month,
-            passed: 0,
-            failed: 0,
-            pending: 0,
-            registered: 0,
-            installed: 0,
-            retired: 0
-          };
+      // Create a comprehensive report
+      const reportData = {
+        reportType: type,
+        dateRange,
+        generatedAt: new Date().toISOString(),
+        summary: {
+          totalTransactions: realTimeData.totalTransactions,
+          inspectionsPassed: realTimeData.inspectionsPassed,
+          inspectionsFailed: realTimeData.inspectionsFailed,
+          inspectionsPending: realTimeData.inspectionsPending,
+          vendorsActive: realTimeData.vendorsActive,
+          partsRegistered: realTimeData.partsRegistered,
+          partsInstalled: realTimeData.partsInstalled,
+          partsRetired: realTimeData.partsRetired
+        },
+        details: {
+          inspectionRate: ((realTimeData.inspectionsPassed / (realTimeData.inspectionsPassed + realTimeData.inspectionsFailed)) * 100).toFixed(2) + '%',
+          partsUtilization: ((realTimeData.partsInstalled / realTimeData.partsRegistered) * 100).toFixed(2) + '%',
+          vendorPerformance: 'Active',
+          lastUpdate: realTimeData.lastUpdate.toISOString()
+        },
+        metadata: {
+          generatedBy: 'RailTrace Admin Dashboard',
+          version: '2.0.0',
+          system: 'Blockchain-based Railway Parts Tracking'
         }
-        
-        switch ((transaction as any).eventType) {
-          case 'inspected':
-            if ((transaction as any).data?.resultCode === 0) monthlyGroups[month].passed++;
-            else if ((transaction as any).data?.resultCode === 1) monthlyGroups[month].failed++;
-            else monthlyGroups[month].pending++;
-            break;
-          case 'registered':
-            monthlyGroups[month].registered++;
-            break;
-          case 'installed':
-            monthlyGroups[month].installed++;
-            break;
-          case 'retired':
-            monthlyGroups[month].retired++;
-            break;
-        }
-      });
-
-      const monthlyArray = Object.values(monthlyGroups).sort((a: any, b: any) => 
-        new Date(a.month).getTime() - new Date(b.month).getTime()
-      );
+      };
       
-      setMonthlyData(monthlyArray as MonthlyData[]);
+      // Generate and download the report based on format
+      const format = reportFormat;
+      let blob: Blob;
+      let filename: string;
+      
+      switch (format) {
+        case 'csv':
+          const csvContent = `Report Type,Date Range,Generated At,Total Transactions,Inspections Passed,Inspections Failed,Inspections Pending,Vendors Active,Parts Registered,Parts Installed,Parts Retired
+${type},${dateRange},${reportData.generatedAt},${reportData.summary.totalTransactions},${reportData.summary.inspectionsPassed},${reportData.summary.inspectionsFailed},${reportData.summary.inspectionsPending},${reportData.summary.vendorsActive},${reportData.summary.partsRegistered},${reportData.summary.partsInstalled},${reportData.summary.partsRetired}`;
+          blob = new Blob([csvContent], { type: 'text/csv' });
+          filename = `${type.toLowerCase().replace(/\s+/g, '_')}_report_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'excel':
+          // For Excel, we'll use JSON format that can be imported
+          blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/vnd.ms-excel' });
+          filename = `${type.toLowerCase().replace(/\s+/g, '_')}_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+          break;
+        default:
+          blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+          filename = `${type.toLowerCase().replace(/\s+/g, '_')}_report_${new Date().toISOString().split('T')[0]}.json`;
+      }
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setShowReportModal(false);
     } catch (error) {
-      console.error('Error loading monthly data:', error);
-      // Fallback to mock data
-      setMonthlyData([
-        { month: 'Jan', passed: 45, failed: 5, pending: 10, registered: 20, installed: 18, retired: 2 },
-        { month: 'Feb', passed: 52, failed: 3, pending: 8, registered: 25, installed: 22, retired: 3 },
-        { month: 'Mar', passed: 48, failed: 7, pending: 12, registered: 30, installed: 28, retired: 4 },
-        { month: 'Apr', passed: 55, failed: 2, pending: 6, registered: 28, installed: 26, retired: 5 },
-        { month: 'May', passed: 58, failed: 4, pending: 9, registered: 32, installed: 30, retired: 6 },
-        { month: 'Jun', passed: 62, failed: 1, pending: 5, registered: 35, installed: 33, retired: 7 }
-      ]);
+      console.error('Error generating report:', error);
+      alert('Failed to generate report. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const loadReports = async () => {
-    // Simulate loading reports
+  const handlePartClick = () => {
+    setSelectedPart(mockPartDetails);
+    setShowPartModal(true);
+  };
+
+  // Real-time data updates via Firestore
+  useEffect(() => {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    // Vendors active + compliant/flagged distribution
+    const unsubVendors = onSnapshot(
+      query(collection(db, 'vendors'), where('active', '==', true)),
+      (snap) => {
+        let compliant = 0; let flagged = 0;
+        snap.forEach(doc => {
+          const d = doc.data() as any;
+          const status = (d.status || '').toLowerCase();
+          if (status === 'compliant') compliant++;
+          else if (status === 'flagged') flagged++;
+        });
+        setVendorsCompliant(compliant);
+        setVendorsFlagged(flagged);
+        setRealTimeData(prev => ({ ...prev, vendorsActive: snap.size, lastUpdate: new Date() }));
+      }
+    );
+
+    // Inspections today, pass/fail
+    const unsubInspections = onSnapshot(
+      query(
+        collection(db, 'inspections'),
+        where('createdAt', '>=', Timestamp.fromDate(startOfDay)),
+        where('createdAt', '<', Timestamp.fromDate(endOfDay))
+      ),
+      (snap) => {
+        let passed = 0; let failed = 0; let pending = 0;
+        snap.forEach(doc => {
+          const d = doc.data() as any;
+          const status = (d.status || '').toLowerCase();
+          if (status === 'pass' || status === 'passed' || status === 'success') passed++;
+          else if (status === 'fail' || status === 'failed') failed++;
+          else pending++;
+        });
+        setRealTimeData(prev => ({
+          ...prev,
+          inspectionsPassed: passed,
+          inspectionsFailed: failed,
+          inspectionsPending: pending,
+          lastUpdate: new Date()
+        }));
+      }
+    );
+
+    // Recent transactions (live)
+    const unsubTx = onSnapshot(
+      query(collection(db, 'events'), orderBy('createdAt', 'desc'), limit(10)),
+      (snap) => {
+        const txs = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+        setRecentTransactions(txs);
+      }
+    );
+
+    // Parts daily stats for sparkline (expects docs with field 'total')
+    const unsubPartsTrend = onSnapshot(
+      query(collection(db, 'partsDailyStats'), orderBy('date', 'asc'), limit(30)),
+      (snap) => {
+        const arr = snap.docs.map(d => ((d.data() as any).total as number) || 0);
+        setPartsTrend(arr);
+      }
+    );
+
+    // Failure rate trend (expects docs with field 'failureRate')
+    const unsubFailureTrend = onSnapshot(
+      query(collection(db, 'inspectionDailyStats'), orderBy('date', 'asc'), limit(30)),
+      (snap) => {
+        const arr = snap.docs.map(d => Math.max(0, Math.min(100, Number((d.data() as any).failureRate) || 0)));
+        setFailureTrend(arr);
+      }
+    );
+
+    return () => {
+      unsubVendors();
+      unsubInspections();
+      unsubTx();
+      unsubPartsTrend();
+      unsubFailureTrend();
+    };
+  }, []);
+
+  // Mock data for demonstration
+  const mockPartDetails: PartDetails = {
+    id: '1',
+    qrCode: 'RAIL-QR-12345678',
+    partType: 'Wheel Set',
+    vendor: 'Tata Steel',
+    lotNumber: 'LN2023-001',
+    manufactureDate: '2023-01-15',
+    supplyDate: '2023-02-20',
+    warranty: '12 Months',
+    batchId: 'B2023-001',
+    serialNumber: 'SN-2023-0001',
+    poNumber: 'PO-2023-0001',
+    currentStatus: 'In Transit',
+    statusColor: 'success',
+    events: [
+      {
+        id: '1',
+        title: 'Part Manufactured',
+        timestamp: 'Jan 15, 2023, 10:30 AM',
+        description: 'Part manufactured and quality checked',
+        icon: 'construction',
+        transactionId: 'TRX12345'
+      },
+      {
+        id: '2',
+        title: 'Part Supplied',
+        timestamp: 'Feb 20, 2023, 02:00 PM',
+        description: 'Part supplied to depot',
+        icon: 'local_shipping',
+        attachment: 'invoice.pdf'
+      },
+      {
+        id: '3',
+        title: 'Part Received',
+        timestamp: 'Feb 22, 2023, 09:15 AM',
+        description: 'Part received at depot',
+        icon: 'warehouse'
+      },
+      {
+        id: '4',
+        title: 'Part Installed',
+        timestamp: 'Mar 1, 2023, 11:30 AM',
+        description: 'Part installed on train',
+        icon: 'build_circle',
+        transactionId: 'TRX12346'
+      }
+    ]
+  };
+
     const mockReports: ReportData[] = [
       {
         id: '1',
@@ -305,9 +343,9 @@ export function Reports() {
       {
         id: '2',
         title: 'Vendor Performance Analysis',
-        type: 'analytics',
+      type: 'detailed',
         category: 'vendors',
-        generatedAt: new Date(Date.now() - 3600000),
+      generatedAt: new Date(),
         period: 'Last 30 days',
         status: 'ready',
         downloadUrl: '#'
@@ -315,9 +353,9 @@ export function Reports() {
       {
         id: '3',
         title: 'Blockchain Audit Report',
-        type: 'detailed',
+      type: 'analytics',
         category: 'blockchain',
-        generatedAt: new Date(Date.now() - 7200000),
+      generatedAt: new Date(),
         period: 'Last 7 days',
         status: 'ready',
         downloadUrl: '#'
@@ -325,758 +363,727 @@ export function Reports() {
       {
         id: '4',
         title: 'Quality Control Report',
-        type: 'summary',
+      type: 'detailed',
         category: 'quality',
-        generatedAt: new Date(Date.now() - 10800000),
+      generatedAt: new Date(),
         period: 'Last 30 days',
-        status: 'generating'
-      }
-    ];
+      status: 'generating',
+      downloadUrl: undefined
+    }
+  ];
 
-    const mockMetrics: ReportMetrics = {
-      totalReports: mockReports.length,
-      readyReports: mockReports.filter(r => r.status === 'ready').length,
-      generatingReports: mockReports.filter(r => r.status === 'generating').length,
-      failedReports: mockReports.filter(r => r.status === 'failed').length
-    };
+  const filterOptions = ['Total Parts', 'Active Vendors', 'Inspections Today', 'Failure Rate'];
 
+  useEffect(() => {
+    // Load available reports list if present
     setReports(mockReports);
-    setMetrics(mockMetrics);
-  };
+  }, []);
 
-  const generateReport = async (type: string, category: string) => {
-    setIsGenerating(true);
-    try {
-      // Simulate report generation with realistic delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const reportTitles = {
-        'inspections': {
-          'summary': 'Monthly Inspection Summary',
-          'detailed': 'Detailed Inspection Analysis',
-          'analytics': 'Inspection Performance Analytics'
-        },
-        'vendors': {
-          'summary': 'Vendor Performance Summary',
-          'detailed': 'Comprehensive Vendor Analysis',
-          'analytics': 'Vendor Quality Metrics'
-        },
-        'blockchain': {
-          'summary': 'Blockchain Transaction Summary',
-          'detailed': 'Complete Blockchain Audit Report',
-          'analytics': 'Blockchain Performance Analytics'
-        },
-        'quality': {
-          'summary': 'Quality Control Summary',
-          'detailed': 'Quality Assurance Report',
-          'analytics': 'Quality Metrics Analysis'
-        }
-      };
 
-      const title = reportTitles[category as keyof typeof reportTitles]?.[type as keyof typeof reportTitles[keyof typeof reportTitles]] || 
-                   `${category.charAt(0).toUpperCase() + category.slice(1)} ${type.charAt(0).toUpperCase() + type.slice(1)} Report`;
-      
-      const newReport: ReportData = {
-        id: `report-${Date.now()}`,
-        title,
-        type: type as 'summary' | 'detailed' | 'analytics',
-        category,
-        generatedAt: new Date(),
-        period: selectedPeriod === '7d' ? 'Last 7 days' : selectedPeriod === '30d' ? 'Last 30 days' : 'Last 90 days',
-        status: 'ready',
-        downloadUrl: '#'
-      };
-
-      setReports(prev => [newReport, ...prev]);
-      setMetrics(prev => ({
-        ...prev,
-        totalReports: prev.totalReports + 1,
-        readyReports: prev.readyReports + 1
-      }));
-
-      // Show success message
-      console.log(`✅ Report generated successfully: ${title}`);
-    } catch (error) {
-      console.error('Error generating report:', error);
-      alert('Failed to generate report. Please try again.');
-    } finally {
-      setIsGenerating(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'text-success-light dark:text-success-dark';
+      case 'pending':
+        return 'text-yellow-600 dark:text-yellow-400';
+      case 'failed':
+        return 'text-danger-light dark:text-danger-dark';
+      default:
+        return 'text-subtle-light dark:text-subtle-dark';
     }
   };
 
-  const downloadReport = async (report: ReportData) => {
-    try {
-      console.log('Generating report:', report.title);
-      
-      let reportContent = '';
-      let fileName = '';
-      let fileType = '';
-
-      switch (report.type) {
-        case 'summary':
-          reportContent = generateSummaryReport(report);
-          fileName = `${report.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.txt`;
-          fileType = 'text/plain';
-          break;
-        case 'detailed':
-          reportContent = generateDetailedReport(report);
-          fileName = `${report.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
-          fileType = 'application/json';
-          break;
-        case 'analytics':
-          reportContent = generateAnalyticsReport(report);
-          fileName = `${report.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
-          fileType = 'text/csv';
-          break;
-        default:
-          reportContent = generateSummaryReport(report);
-          fileName = `${report.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.txt`;
-          fileType = 'text/plain';
-      }
-
-      // Create and download the file
-      const blob = new Blob([reportContent], { type: fileType });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      console.log('Report downloaded successfully:', fileName);
-    } catch (error) {
-      console.error('Error downloading report:', error);
-      alert('Failed to download report. Please try again.');
+  const getStatusBgColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'bg-success-light/10 dark:bg-success-dark/20';
+      case 'pending':
+        return 'bg-yellow-100 dark:bg-yellow-900/20';
+      case 'failed':
+        return 'bg-danger-light/10 dark:bg-danger-dark/20';
+      default:
+        return 'bg-gray-100 dark:bg-gray-900/20';
     }
   };
 
-  const generateSummaryReport = (report: ReportData): string => {
-    const timestamp = new Date().toLocaleString();
-    return `
-RAILWAY PARTS MANAGEMENT SYSTEM - SUMMARY REPORT
-================================================
-
-Report Title: ${report.title}
-Generated: ${timestamp}
-Period: ${report.period}
-Category: ${report.category}
-
-REAL-TIME STATISTICS
-====================
-Total Transactions: ${realTimeData.totalTransactions}
-Inspections Passed: ${realTimeData.inspectionsPassed}
-Inspections Failed: ${realTimeData.inspectionsFailed}
-Inspections Pending: ${realTimeData.inspectionsPending}
-Parts Registered: ${realTimeData.partsRegistered}
-Parts Installed: ${realTimeData.partsInstalled}
-Parts Retired: ${realTimeData.partsRetired}
-Active Vendors: ${realTimeData.vendorsActive}
-
-INSPECTION SUMMARY
-==================
-Success Rate: ${realTimeData.inspectionsPassed + realTimeData.inspectionsFailed > 0 
-  ? Math.round((realTimeData.inspectionsPassed / (realTimeData.inspectionsPassed + realTimeData.inspectionsFailed)) * 100)
-  : 0}%
-
-Parts in System: ${realTimeData.partsRegistered - realTimeData.partsRetired}
-
-VENDOR PERFORMANCE
-==================
-${vendorPerformanceData.map(vendor => 
-  `${vendor.name}: ${vendor.score}% (${vendor.quality}) - ${vendor.deliveries} deliveries, ${vendor.defects} defects`
-).join('\n')}
-
-FITTING DISTRIBUTION
-====================
-${fittingDistributionData.map(fitting => 
-  `${fitting.name}: ${fitting.value}% (${fitting.count} parts)`
-).join('\n')}
-
-REPORT METRICS
-==============
-Total Reports Generated: ${metrics.totalReports}
-Ready Reports: ${metrics.readyReports}
-Generating Reports: ${metrics.generatingReports}
-Failed Reports: ${metrics.failedReports}
-
----
-Generated by Railway Parts Management System
-Last Updated: ${lastUpdate.toLocaleString()}
-    `.trim();
-  };
-
-  const generateDetailedReport = (report: ReportData): string => {
-    const reportData = {
-      reportInfo: {
-        title: report.title,
-        type: report.type,
-        category: report.category,
-        period: report.period,
-        generatedAt: report.generatedAt.toISOString(),
-        generatedBy: 'Railway Parts Management System'
-      },
-      realTimeData: {
-        ...realTimeData,
-        lastUpdate: realTimeData.lastUpdate.toISOString()
-      },
-      monthlyData: monthlyData.map(month => ({
-        ...month,
-        // Convert any Date objects to ISO strings if needed
-      })),
-      vendorPerformance: vendorPerformanceData,
-      fittingDistribution: fittingDistributionData,
-      metrics: metrics,
-      inspectionTrends: monthlyData.length > 0 ? monthlyData : inspectionData,
-      summary: {
-        totalTransactions: realTimeData.totalTransactions,
-        successRate: realTimeData.inspectionsPassed + realTimeData.inspectionsFailed > 0 
-          ? Math.round((realTimeData.inspectionsPassed / (realTimeData.inspectionsPassed + realTimeData.inspectionsFailed)) * 100)
-          : 0,
-        partsInSystem: realTimeData.partsRegistered - realTimeData.partsRetired,
-        averageVendorScore: vendorPerformanceData.length > 0 
-          ? Math.round(vendorPerformanceData.reduce((sum, v) => sum + v.score, 0) / vendorPerformanceData.length)
-          : 0
-      }
-    };
-
-    return JSON.stringify(reportData, null, 2);
-  };
-
-  const generateAnalyticsReport = (_report: ReportData): string => {
-    const headers = [
-      'Metric',
-      'Value',
-      'Percentage',
-      'Category',
-      'Last Updated'
-    ];
-
-    const rows = [
-      ['Total Transactions', realTimeData.totalTransactions.toString(), '100%', 'System', lastUpdate.toISOString()],
-      ['Inspections Passed', realTimeData.inspectionsPassed.toString(), 
-        realTimeData.totalTransactions > 0 ? `${Math.round((realTimeData.inspectionsPassed / realTimeData.totalTransactions) * 100)}%` : '0%', 
-        'Inspections', lastUpdate.toISOString()],
-      ['Inspections Failed', realTimeData.inspectionsFailed.toString(), 
-        realTimeData.totalTransactions > 0 ? `${Math.round((realTimeData.inspectionsFailed / realTimeData.totalTransactions) * 100)}%` : '0%', 
-        'Inspections', lastUpdate.toISOString()],
-      ['Parts Registered', realTimeData.partsRegistered.toString(), 
-        realTimeData.totalTransactions > 0 ? `${Math.round((realTimeData.partsRegistered / realTimeData.totalTransactions) * 100)}%` : '0%', 
-        'Parts', lastUpdate.toISOString()],
-      ['Parts Installed', realTimeData.partsInstalled.toString(), 
-        realTimeData.partsRegistered > 0 ? `${Math.round((realTimeData.partsInstalled / realTimeData.partsRegistered) * 100)}%` : '0%', 
-        'Parts', lastUpdate.toISOString()],
-      ['Parts Retired', realTimeData.partsRetired.toString(), 
-        realTimeData.partsRegistered > 0 ? `${Math.round((realTimeData.partsRetired / realTimeData.partsRegistered) * 100)}%` : '0%', 
-        'Parts', lastUpdate.toISOString()],
-      ['Active Vendors', realTimeData.vendorsActive.toString(), 'N/A', 'Vendors', lastUpdate.toISOString()],
-      ['Success Rate', `${realTimeData.inspectionsPassed + realTimeData.inspectionsFailed > 0 
-        ? Math.round((realTimeData.inspectionsPassed / (realTimeData.inspectionsPassed + realTimeData.inspectionsFailed)) * 100)
-        : 0}%`, 'N/A', 'Quality', lastUpdate.toISOString()]
-    ];
-
-    // Add vendor data
-    vendorPerformanceData.forEach(vendor => {
-      rows.push([
-        `Vendor: ${vendor.name}`,
-        vendor.score.toString(),
-        `${vendor.score}%`,
-        'Vendor Performance',
-        lastUpdate.toISOString()
-      ]);
-    });
-
-    // Add fitting distribution data
-    fittingDistributionData.forEach(fitting => {
-      rows.push([
-        `Fitting: ${fitting.name}`,
-        fitting.count.toString(),
-        `${fitting.value}%`,
-        'Parts Distribution',
-        lastUpdate.toISOString()
-      ]);
-    });
-
-    return [headers, ...rows].map(row => row.join(',')).join('\n');
-  };
-
-  const downloadAllReports = async () => {
-    try {
-      console.log('Downloading all reports...');
-      
-      // Create a comprehensive report with all data
-      const allReportsData = {
-        exportInfo: {
-          exportedAt: new Date().toISOString(),
-          totalReports: filteredReports.length,
-          exportedBy: 'Railway Parts Management System',
-          version: '1.0'
-        },
-        reports: filteredReports.map(report => ({
-          ...report,
-          generatedAt: report.generatedAt.toISOString()
-        })),
-        realTimeData: {
-          ...realTimeData,
-          lastUpdate: realTimeData.lastUpdate.toISOString()
-        },
-        monthlyData: monthlyData.map(month => ({
-          ...month
-        })),
-        vendorPerformance: vendorPerformanceData,
-        fittingDistribution: fittingDistributionData,
-        metrics: metrics,
-        inspectionTrends: monthlyData.length > 0 ? monthlyData : inspectionData
-      };
-
-      const content = JSON.stringify(allReportsData, null, 2);
-      const fileName = `Railway_Parts_All_Reports_${new Date().toISOString().split('T')[0]}.json`;
-      
-      const blob = new Blob([content], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      console.log('All reports downloaded successfully:', fileName);
-    } catch (error) {
-      console.error('Error downloading all reports:', error);
-      alert('Failed to download all reports. Please try again.');
+  const getStatusDotColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'bg-success-light dark:bg-success-dark';
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'failed':
+        return 'bg-danger-light dark:bg-danger-dark';
+      default:
+        return 'bg-gray-500';
     }
   };
-
-  // kept for legacy references; not used in the new ReportCard layout
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'summary': return <FileText className="h-4 w-4" />;
-      case 'detailed': return <BarChart3 className="h-4 w-4" />;
-      case 'analytics': return <TrendingUp className="h-4 w-4" />;
-      default: return <FileText className="h-4 w-4" />;
-    }
-  };
-
-  const filteredReports = reports.filter(report => {
-    return selectedCategory === 'all' || report.category === selectedCategory;
-  });
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Reports & Analytics</h2>
-        <p className="text-gray-600 mt-1">Generate and download comprehensive reports</p>
-          <p className="text-sm text-gray-500 mt-1">
-            Last updated: {lastUpdate.toLocaleTimeString()} | 
-            Real-time data: {realTimeData.totalTransactions} transactions
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            loadReports();
-            loadMonthlyData();
-            setLastUpdate(new Date());
-          }}
-          leftIcon={<RefreshCw className="h-4 w-4" />}
-        >
-          Refresh Data
-        </Button>
-      </div>
-
-      {/* Real-time Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total Transactions"
-          value={realTimeData.totalTransactions}
-          subtitle="All blockchain events"
-          icon={<Activity className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Inspections Passed"
-          value={realTimeData.inspectionsPassed}
-          subtitle={`${realTimeData.inspectionsFailed} failed, ${realTimeData.inspectionsPending} pending`}
-          icon={<CheckCircle className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Parts Registered"
-          value={realTimeData.partsRegistered}
-          subtitle={`${realTimeData.partsInstalled} installed, ${realTimeData.partsRetired} retired`}
-          icon={<FileText className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Active Vendors"
-          value={realTimeData.vendorsActive}
-          subtitle="Currently supplying parts"
-          icon={<TrendingUp className="h-6 w-6" />}
-        />
-      </div>
-
-      {/* Recent Transactions - Mobile-first card grid with horizontal key:value rows */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
-              <p className="text-sm text-gray-500">Live updates from blockchain and Firestore</p>
-            </div>
-            <Badge variant="info">{recentTransactions.length}</Badge>
+    <div className="font-display bg-[#f0f2f5] dark:bg-[#0d1117] min-h-screen">
+      <div className="min-h-screen">
+        {/* Header - Exact Stitch AI Match */}
+        <header className="sticky top-0 z-10 flex items-center justify-between p-4 bg-[#ffffff]/80 dark:bg-[#161b22]/80 backdrop-blur-sm border-b border-[#d0d7de] dark:border-[#30363d]">
+          <div></div>
+          <h1 className="text-lg font-bold text-[#0d1117] dark:text-[#c9d1d9]">{t('reports.title')}</h1>
+          <div className="flex items-center gap-2">
+            <button className="p-2 text-[#0d1117] dark:text-[#c9d1d9]">
+              <QrCode className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={() => {/* refresh handled by onSnapshot; noop */}}
+              className="p-2 text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#21262d] rounded-lg transition-colors"
+              title="Refresh data"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {recentTransactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No recent activity</div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentTransactions.map((tx: any, idx: number) => (
-                <div
-                  key={`${tx.id}-${idx}`}
-                  className="border border-gray-200 rounded-lg p-3 bg-white hover:bg-gray-50 transition-colors duration-200 shadow-sm hover:shadow-md active:scale-[0.99]"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 capitalize">{tx.eventType || 'event'}</span>
-                        {typeof tx.blockNumber === 'number' && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700"># {tx.blockNumber}</span>
-                        )}
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500">{new Date(tx.createdAt).toLocaleString()}</div>
-                    </div>
-                    <div className="text-right">
-                      <Badge size="sm" variant={(tx.status || 'confirmed') === 'confirmed' ? 'success' : (tx.status || 'pending') === 'pending' ? 'warning' : 'error'}>
-                        {tx.status || 'confirmed'}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <KeyValueRow label="Part Hash" value={<TruncatedText text={tx.partHash || tx.fittingId || '-'} />} />
-                    {tx.transactionHash && (
-                      <KeyValueRow
-                        label="Tx Hash"
-                        value={
-                          <a href={`https://testnet.bscscan.com/tx/${tx.transactionHash}`} target="_blank" rel="noreferrer" className="text-blue-700 hover:text-blue-900" title={tx.transactionHash}>
-                            <TruncatedText text={tx.transactionHash} />
-                          </a>
-                        }
-                      />
-                    )}
-                    {tx.data && typeof tx.data === 'object' && (
-                      <div className="mt-2">
-                        <KeyValueRow label="Data" value={<span /> } />
-                        {renderNestedObject(tx.data)}
-                      </div>
-                    )}
-                  </div>
+        </header>
+
+        <div className="p-4">
+          {/* Top Stats with micro-visualizations */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4">
+            {/* Total Parts with sparkline */}
+            <button onClick={() => scrollTo(partsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow">
+              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark">Total Parts</p>
+              <p className="text-lg sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{realTimeData.partsRegistered.toLocaleString()}</p>
+              <div className="mt-2 h-8">
+                <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="partsSpark" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="var(--color-success)" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="var(--color-success)" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  {partsTrend.length > 1 ? (
+                    <>
+                      <path d={(() => {
+                        const max = Math.max(...partsTrend);
+                        const min = Math.min(...partsTrend);
+                        const range = Math.max(1, max - min);
+                        return partsTrend.map((v, i) => {
+                          const x = (i / (partsTrend.length - 1)) * 100;
+                          const y = 28 - ((v - min) / range) * 26;
+                          return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                        }).join(' ');
+                      })()} fill="none" stroke="var(--color-success)" strokeWidth="1.5"/>
+                      <path d={(() => {
+                        const max = Math.max(...partsTrend);
+                        const min = Math.min(...partsTrend);
+                        const range = Math.max(1, max - min);
+                        const d = partsTrend.map((v, i) => {
+                          const x = (i / (partsTrend.length - 1)) * 100;
+                          const y = 28 - ((v - min) / range) * 26;
+                          return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                        }).join(' ');
+                        return `${d} L 100 30 L 0 30 Z`;
+                      })()} fill="url(#partsSpark)" />
+                    </>
+                  ) : (
+                    <rect x="0" y="14" width="100" height="2" className="fill-primary/10" />
+                  )}
+                </svg>
+              </div>
+            </button>
+
+            {/* Active Vendors with donut */}
+            <button onClick={() => scrollTo(vendorsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow">
+              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark">Active Vendors</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-lg sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{realTimeData.vendorsActive.toLocaleString()}</p>
+                <svg width="40" height="40" viewBox="0 0 36 36" className="shrink-0">
+                  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--color-border)" strokeWidth="3" />
+                  {(() => {
+                    const total = Math.max(1, vendorsCompliant + vendorsFlagged);
+                    const comp = Math.round((vendorsCompliant / total) * 100);
+                    const flag = 100 - comp;
+                    return (
+                      <>
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--color-success)" strokeWidth="3" strokeDasharray={`${comp}, 100`} strokeLinecap="round" />
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--color-warning)" strokeWidth="3" strokeDasharray={`${flag}, 100`} strokeDashoffset={-comp} strokeLinecap="round" />
+                      </>
+                    );
+                  })()}
+                </svg>
+              </div>
+              <p className="mt-1 text-xs text-subtle-light dark:text-subtle-dark">Compliant {vendorsCompliant} · Flagged {vendorsFlagged}</p>
+            </button>
+
+            {/* Inspections Today with progress circle */}
+            <button onClick={() => scrollTo(inspectionsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow">
+              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark">Inspections Today</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-lg sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{(realTimeData.inspectionsPassed + realTimeData.inspectionsFailed + realTimeData.inspectionsPending).toLocaleString()}</p>
+                <div className="relative flex items-center justify-center" style={{width: 40, height: 40}}>
+                  {(() => {
+                    const total = realTimeData.inspectionsPassed + realTimeData.inspectionsFailed + realTimeData.inspectionsPending;
+                    const completed = realTimeData.inspectionsPassed + realTimeData.inspectionsFailed;
+                    const pct = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
+                    return (
+                      <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--color-border)" strokeWidth="3"></circle>
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--color-primary)" strokeDasharray={`${pct}, 100`} strokeLinecap="round" strokeWidth="3"></circle>
+                      </svg>
+                    );
+                  })()}
+                  <span className="text-xs font-bold" style={{ color: 'var(--color-primary)' }}>{(() => {
+                    const total = realTimeData.inspectionsPassed + realTimeData.inspectionsFailed + realTimeData.inspectionsPending;
+                    const completed = realTimeData.inspectionsPassed + realTimeData.inspectionsFailed;
+                    const pct = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
+                    return `${pct}%`;
+                  })()}</span>
                 </div>
+              </div>
+              <p className="mt-1 text-xs text-subtle-light dark:text-subtle-dark">Completed {realTimeData.inspectionsPassed + realTimeData.inspectionsFailed}</p>
+            </button>
+
+            {/* Failure Rate with mini area */}
+            <button onClick={() => scrollTo(failureSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow">
+              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark">Failure Rate</p>
+              <div className="flex items-center gap-1 text-danger-light dark:text-danger-dark">
+                <p className="text-lg sm:text-2xl font-bold">{(() => {
+                  const total = realTimeData.inspectionsPassed + realTimeData.inspectionsFailed;
+                  const rate = total > 0 ? (realTimeData.inspectionsFailed / total) * 100 : 0;
+                  return `${rate.toFixed(1)}%`;
+                })()}</p>
+                <span className="material-symbols-outlined text-base">arrow_upward</span>
+              </div>
+              <div className="mt-2 h-8">
+                <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d={(() => {
+                    const arr = failureTrend.length > 1 ? failureTrend : [0,0,0];
+                    const d = arr.map((v, i) => {
+                      const x = (i / (arr.length - 1)) * 100;
+                      const y = 30 - (v / 100) * 28;
+                      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                    }).join(' ');
+                    return d;
+                  })()} fill="none" stroke="var(--color-danger)" strokeWidth="1.5" />
+                  <path d={(() => {
+                    const arr = failureTrend.length > 1 ? failureTrend : [0,0,0];
+                    const d = arr.map((v, i) => {
+                      const x = (i / (arr.length - 1)) * 100;
+                      const y = 30 - (v / 100) * 28;
+                      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                    }).join(' ');
+                    return `${d} L 100 30 L 0 30 Z`;
+                  })()} fill="var(--color-danger)" fillOpacity="0.1" />
+                </svg>
+              </div>
+            </button>
+          </div>
+          {/* Filter Chips - Exact Stitch AI Match */}
+          <div className="flex pb-4 -mx-4 overflow-x-auto scrolling-touch">
+            <div className="flex flex-nowrap gap-2 px-4">
+              {filterOptions.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setActiveFilter(option)}
+                  className={`px-4 py-2 text-sm font-medium rounded-full shrink-0 ${
+                    activeFilter === option
+                      ? 'bg-[#1773cf]/10 text-[#1773cf] dark:bg-[#1773cf]/20 dark:text-[#1773cf]'
+                      : 'bg-[#ffffff] dark:bg-[#161b22] text-[#57606a] dark:text-[#8b949e]'
+                  }`}
+                >
+                  {option}
+                </button>
               ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Report Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total Reports"
-          value={metrics.totalReports}
-          subtitle="All generated reports"
-          icon={<FileText className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Ready"
-          value={metrics.readyReports}
-          subtitle="Available for download"
-          icon={<CheckCircle className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Generating"
-          value={metrics.generatingReports}
-          subtitle="In progress"
-          icon={<Clock className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Failed"
-          value={metrics.failedReports}
-          subtitle="Require attention"
-          icon={<AlertTriangle className="h-6 w-6" />}
-        />
-      </div>
-
-      {/* Report Generation - mobile-first clean layout */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900">Generate New Report</h3>
-          <p className="text-sm text-gray-500">Optimized for mobile: stacked inputs and large tap targets.</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" defaultValue="summary">
-                <option value="summary">Summary Report</option>
-                <option value="detailed">Detailed Report</option>
-                <option value="analytics">Analytics Report</option>
-              </select>
-            </div>
-            <div className="min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-              <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <option value="all">All Categories</option>
-                <option value="inspections">Inspections</option>
-                <option value="vendors">Vendors</option>
-                <option value="blockchain">Blockchain</option>
-                <option value="quality">Quality Control</option>
-              </select>
-            </div>
-            <div className="min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
-              <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-              </select>
-            </div>
           </div>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Button onClick={() => generateReport('summary', selectedCategory)} loading={isGenerating} leftIcon={<FileText className="h-4 w-4" />}>Summary</Button>
-            <Button onClick={() => generateReport('detailed', selectedCategory)} loading={isGenerating} leftIcon={<BarChart3 className="h-4 w-4" />} variant="outline">Detailed</Button>
-            <Button onClick={() => generateReport('analytics', selectedCategory)} loading={isGenerating} leftIcon={<TrendingUp className="h-4 w-4" />} variant="outline">Analytics</Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Inspection Trends</h3>
-            <p className="text-sm text-gray-500">Real-time inspection data over time</p>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
-              </div>
-            ) : (
-            <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={monthlyData.length > 0 ? monthlyData : inspectionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                  <Area type="monotone" dataKey="passed" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name="Passed" />
-                  <Area type="monotone" dataKey="failed" stackId="2" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} name="Failed" />
-                  <Area type="monotone" dataKey="pending" stackId="3" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.6} name="Pending" />
-              </AreaChart>
-            </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Parts Lifecycle</h3>
-            <p className="text-sm text-gray-500">Parts registered, installed, and retired</p>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={monthlyData.length > 0 ? monthlyData : inspectionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="registered" stroke="#3B82F6" strokeWidth={2} name="Registered" />
-                  <Line type="monotone" dataKey="installed" stroke="#10B981" strokeWidth={2} name="Installed" />
-                  <Line type="monotone" dataKey="retired" stroke="#EF4444" strokeWidth={2} name="Retired" />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Additional Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Fitting Distribution</h3>
-            <p className="text-sm text-gray-500">Types of railway parts in the system</p>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie data={fittingDistributionData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
-                  {fittingDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Real-time Activity</h3>
-            <p className="text-sm text-gray-500">Current system activity overview</p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-700">Total Transactions</span>
-                <span className="text-lg font-bold text-blue-600">{realTimeData.totalTransactions}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-700">Active Vendors</span>
-                <span className="text-lg font-bold text-green-600">{realTimeData.vendorsActive}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-700">Parts in System</span>
-                <span className="text-lg font-bold text-purple-600">{realTimeData.partsRegistered - realTimeData.partsRetired}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-700">Success Rate</span>
-                <span className="text-lg font-bold text-orange-600">
-                  {realTimeData.inspectionsPassed + realTimeData.inspectionsFailed > 0 
-                    ? Math.round((realTimeData.inspectionsPassed / (realTimeData.inspectionsPassed + realTimeData.inspectionsFailed)) * 100)
-                    : 0}%
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Vendor Performance */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900">Vendor Performance</h3>
-          <p className="text-sm text-gray-500">Performance scores, deliveries, and quality metrics</p>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={vendorPerformanceData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip />
-              <Bar yAxisId="left" dataKey="score" fill="#3B82F6" name="Performance Score" />
-              <Bar yAxisId="right" dataKey="deliveries" fill="#10B981" name="Deliveries" />
-              <Bar yAxisId="right" dataKey="parts" fill="#F59E0B" name="Total Parts" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Vendor Quality Analysis */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900">Vendor Quality Analysis</h3>
-          <p className="text-sm text-gray-500">Detailed quality metrics and defect rates</p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {vendorPerformanceData.map((vendor, index) => (
-              <div key={`${vendor.name}-${index}`} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{vendor.name}</h4>
-                    <Badge 
-                      variant={vendor.score >= 90 ? 'success' : vendor.score >= 80 ? 'warning' : 'error'}
-                      size="sm"
-                    >
-                      {vendor.quality}
-                    </Badge>
+          <div className="space-y-6">
+            {/* Vendors Section Anchor */}
+            <div ref={partsSectionRef} style={{ scrollMarginTop: 80 }}></div>
+            <div ref={vendorsSectionRef} style={{ scrollMarginTop: 80 }}></div>
+            {/* Lifecycle Timeline - Exact Stitch AI Match */}
+            <div className="p-4 overflow-hidden bg-[#ffffff] dark:bg-[#161b22] rounded-lg border border-[#d0d7de] dark:border-[#30363d]">
+              <p className="text-sm font-medium text-[#57606a] dark:text-[#8b949e]">Lifecycle Timeline</p>
+              <h2 className="text-xl font-bold text-[#0d1117] dark:text-[#c9d1d9]">Part Lifecycle</h2>
+              <p className="mb-4 text-sm text-[#57606a] dark:text-[#8b949e]">Track the journey of parts from installation to maintenance.</p>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center justify-center rounded-full size-8 bg-[#1773cf] text-white">
+                      <Wrench className="h-5 w-5" />
+                    </div>
+                    <div className="w-0.5 h-8 bg-[#1773cf]/30"></div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Score:</span>
-                      <span className="ml-2 font-medium">{vendor.score}%</span>
+                  <p className="font-semibold text-[#0d1117] dark:text-[#c9d1d9]">
+                    Installed: <span className="font-normal text-[#57606a] dark:text-[#8b949e]">{realTimeData.partsInstalled.toLocaleString()}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center justify-center rounded-full size-8 bg-[#1773cf] text-white">
+                      <CheckCircle className="h-5 w-5" />
                     </div>
-                    <div>
-                      <span className="text-gray-600">Defects:</span>
-                      <span className="ml-2 font-medium">{vendor.defects}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Deliveries:</span>
-                      <span className="ml-2 font-medium">{vendor.deliveries}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Total Parts:</span>
-                      <span className="ml-2 font-medium">{vendor.parts}</span>
+                    <div className="w-0.5 h-8 bg-[#1773cf]/30"></div>
+                  </div>
+                  <p className="font-semibold text-[#0d1117] dark:text-[#c9d1d9]">
+                    Inspected: <span className="font-normal text-[#57606a] dark:text-[#8b949e]">{realTimeData.inspectionsPassed.toLocaleString()}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center justify-center rounded-full size-8 bg-[#1773cf] text-white">
+                      <Construction className="h-5 w-5" />
                     </div>
                   </div>
+                  <p className="font-semibold text-[#0d1117] dark:text-[#c9d1d9]">
+                    Maintained: <span className="font-normal text-[#57606a] dark:text-[#8b949e]">300</span>
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
-      {/* Report List - Mobile optimized using ReportCard */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-            <h3 className="text-lg font-semibold text-gray-900">Generated Reports</h3>
-              <p className="text-sm text-gray-500 mt-1">Download individual reports or export all data</p>
+            {/* Charts Grid - Real-time */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Inspections Today Breakdown */}
+              <div ref={inspectionsSectionRef} style={{ scrollMarginTop: 80 }} className="p-4 bg-card-light dark:bg-card-dark rounded-lg">
+                <h3 className="font-semibold text-foreground-light dark:text-foreground-dark">Inspections Today</h3>
+                <p className="text-sm text-subtle-light dark:text-subtle-dark">Pass / Fail / Pending</p>
+                <div className="h-40 mt-4">
+                  <RealTimeChart
+                    collectionName="inspections"
+                    dataField="status"
+                    labelField="createdAt"
+                    maxDataPoints={30}
+                    height={160}
+                    color="#1773cf"
+                    showTooltip={true}
+                    showDrillDown={true}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Failure Rate Trend */}
+              <div ref={failureSectionRef} style={{ scrollMarginTop: 80 }} className="p-4 bg-card-light dark:bg-card-dark rounded-lg">
+                <h3 className="font-semibold text-foreground-light dark:text-foreground-dark">Failure Rate</h3>
+                <p className="text-sm text-subtle-light dark:text-subtle-dark">Last 30 Days</p>
+                <div className="h-40 mt-4">
+                  <RealTimeChart
+                    collectionName="inspectionDailyStats"
+                    dataField="failureRate"
+                    labelField="date"
+                    maxDataPoints={30}
+                    height={160}
+                    color="#ef4444"
+                    showTooltip={true}
+                    showDrillDown={false}
+                    className="w-full"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="info">{filteredReports.length} reports</Badge>
-              {filteredReports.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={downloadAllReports}
-                  leftIcon={<Download className="h-4 w-4" />}
-                >
-                  Download All
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredReports.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredReports.map((report) => (
-                <ReportCard
-                  key={report.id}
-                  title={report.title}
-                  category={report.category}
-                  period={report.period}
-                  generatedAt={report.generatedAt}
-                  status={report.status}
-                  onDownload={report.status === 'ready' ? () => downloadReport(report) : undefined}
-                  icon={getTypeIcon(report.type)}
+
+            {/* Vendors Activity */}
+            <div className="p-4 bg-card-light dark:bg-card-dark rounded-lg">
+              <h3 className="font-semibold text-foreground-light dark:text-foreground-dark">Active Vendors</h3>
+              <p className="text-sm text-subtle-light dark:text-subtle-dark">Realtime Activity</p>
+              <div className="h-40 mt-4">
+                <RealTimeChart
+                  collectionName="vendorActivity"
+                  dataField="count"
+                  labelField="timestamp"
+                  maxDataPoints={50}
+                  height={160}
+                  color="#22c55e"
+                  showTooltip={true}
+                  showDrillDown={false}
+                  className="w-full"
                 />
-              ))}
+              </div>
+              <div className="p-4 bg-card-light dark:bg-card-dark rounded-lg">
+                {/* placeholder for additional charts if needed */}
+              </div>
+      </div>
+
+            {/* Geographic Distribution */}
+            <div className="p-4 bg-card-light dark:bg-card-dark rounded-lg">
+              <h3 className="font-semibold text-foreground-light dark:text-foreground-dark">Geographic Distribution</h3>
+              <p className="text-sm text-subtle-light dark:text-subtle-dark">Parts by Region</p>
+              <div className="h-48 mt-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <MapPin className="h-12 w-12 text-primary mx-auto mb-2" />
+                  <p className="text-sm text-subtle-light dark:text-subtle-dark">Map visualization would go here</p>
+                </div>
+              </div>
+      </div>
+
+            {/* Anomalies & Alerts */}
+            <div className="p-4 bg-card-light dark:bg-card-dark rounded-lg">
+              <h3 className="font-semibold text-foreground-light dark:text-foreground-dark">Anomalies & Alerts</h3>
+              <p className="text-sm text-subtle-light dark:text-subtle-dark">Recent Issues</p>
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-danger-light/10 dark:bg-danger-dark/20">
+                  <AlertTriangle className="h-5 w-5 text-danger-light dark:text-danger-dark" />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground-light dark:text-foreground-dark">High Vibration Detected</p>
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark">Wheel Set #WS-001</p>
+                  </div>
+                  <span className="text-xs font-medium text-danger-light dark:text-danger-dark">Critical</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/20">
+                  <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground-light dark:text-foreground-dark">Maintenance Due</p>
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark">Brake System #BS-002</p>
+                  </div>
+                  <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">Warning</span>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-2">No reports found</p>
-              <p className="text-sm text-gray-400">
-                Generate your first report to get started
-              </p>
+
+            {/* Available Reports */}
+            <div className="p-4 bg-card-light dark:bg-card-dark rounded-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground-light dark:text-foreground-dark">Available Reports</h3>
+                <button 
+                  onClick={() => handleGenerateReport('Custom')}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg"
+                >
+                      <FileText className="h-4 w-4" />
+                  Generate New
+                </button>
+              </div>
+              <div className="space-y-3">
+                {mockReports.map((report) => (
+                  <div key={report.id} className="flex items-center justify-between p-3 rounded-lg border border-border-light dark:border-border-dark">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+                        <FileText className="h-5 w-5" />
+            </div>
+            <div>
+                        <p className="font-medium text-foreground-light dark:text-foreground-dark">{report.title}</p>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">{report.period}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        report.status === 'ready' 
+                          ? 'bg-success-light/10 text-success-light dark:bg-success-dark/20 dark:text-success-dark'
+                          : report.status === 'generating'
+                          ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          : 'bg-danger-light/10 text-danger-light dark:bg-danger-dark/20 dark:text-danger-dark'
+                      }`}>
+                        {report.status}
+                      </span>
+                      {report.status === 'ready' && (
+                        <button className="p-2 text-subtle-light dark:text-subtle-dark hover:bg-black/5 dark:hover:bg-white/5 rounded-lg">
+                          <Download className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="p-4 bg-card-light dark:bg-card-dark rounded-lg">
+              <h3 className="font-semibold text-foreground-light dark:text-foreground-dark">Recent Activity</h3>
+              <p className="text-sm text-subtle-light dark:text-subtle-dark">Latest Transactions</p>
+              <div className="space-y-3 mt-4">
+                {recentTransactions.map((tx) => (
+                  <div 
+                    key={tx.id} 
+                    className="flex items-center justify-between p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+                    onClick={handlePartClick}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+                        <Eye className="h-5 w-5" />
+            </div>
+            <div>
+                        <p className="font-medium text-foreground-light dark:text-foreground-dark">{tx.type}</p>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">{tx.partHash}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBgColor(tx.status)} ${getStatusColor(tx.status)}`}>
+                        {tx.status}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-subtle-light dark:text-subtle-dark" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Part Details Modal - Exact Stitch AI Match */}
+        {showPartModal && selectedPart && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+            <div className="flex animate-slide-up flex-col rounded-t-xl bg-background-light dark:bg-background-dark w-full max-h-[90vh]">
+              <div className="flex h-12 w-full flex-col items-center justify-center p-2">
+                <div className="h-1.5 w-10 rounded-full bg-border-light dark:bg-border-dark"></div>
+              </div>
+              <div className="flex items-center justify-between border-b border-border-light px-4 pb-4 dark:border-border-dark">
+                <div className="w-8"></div>
+                <h1 className="text-lg font-bold text-content-light dark:text-content-dark">Part Details</h1>
+                <button 
+                  onClick={() => setShowPartModal(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 pb-20">
+                <section className="mb-6">
+                  <h2 className="mb-3 text-base font-bold text-content-light dark:text-content-dark">Part Summary</h2>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg border border-border-light bg-surface-light p-4 dark:border-border-dark dark:bg-surface-dark">
+                    <div className="col-span-2 flex items-center gap-3 py-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <QrCode2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">QR Code</p>
+                        <p className="font-semibold text-content-light dark:text-content-dark">{selectedPart.qrCode}</p>
+                      </div>
+                    </div>
+                    <div className="py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Part Type</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.partType}</p>
+                    </div>
+                    <div className="py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Vendor</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.vendor}</p>
+                    </div>
+                    <div className="py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Lot Number</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.lotNumber}</p>
+                    </div>
+                    <div className="py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Manufacture Date</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.manufactureDate}</p>
+                    </div>
+                    <div className="py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Supply Date</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.supplyDate}</p>
+                    </div>
+                    <div className="py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Warranty</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.warranty}</p>
+                    </div>
+                    <div className="py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Batch ID</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.batchId}</p>
+                    </div>
+                    <div className="py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Serial Number</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.serialNumber}</p>
+                    </div>
+                    <div className="col-span-2 py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">PO Number</p>
+                      <p className="font-medium text-content-light dark:text-content-dark">{selectedPart.poNumber}</p>
+                    </div>
+                    <div className="col-span-2 py-2">
+                      <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark">Current Status</p>
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${getStatusBgColor(selectedPart.statusColor)} ${getStatusColor(selectedPart.statusColor)}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${getStatusDotColor(selectedPart.statusColor)}`}></span>
+                        {selectedPart.currentStatus}
+                      </span>
+                    </div>
+          </div>
+                </section>
+
+                <section className="mb-6">
+                  <h2 className="mb-3 text-base font-bold text-content-light dark:text-content-dark">Event Timeline</h2>
+                  <div>
+                    {selectedPart.events.map((event, index) => (
+                      <div key={event.id} className="relative flex items-start gap-4 pl-1">
+                        {index < selectedPart.events.length - 1 && (
+                          <div className="absolute left-[19px] top-[19px] h-full w-0.5 bg-border-light dark:bg-border-dark"></div>
+                        )}
+                        <div className="z-10 flex h-10 w-10 items-center justify-center rounded-full bg-surface-light ring-4 ring-background-light dark:bg-surface-dark dark:ring-background-dark">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">
+                            <span className="material-symbols-outlined text-lg">{event.icon}</span>
+                          </div>
+                        </div>
+                        <div className="flex-1 pt-1.5">
+                          <p className="font-semibold text-content-light dark:text-content-dark">{event.title}</p>
+                          <p className="text-sm text-subtle-light dark:text-subtle-dark">{event.timestamp}</p>
+                          <p className="text-sm text-subtle-light dark:text-subtle-dark">{event.description}</p>
+                          {event.transactionId && (
+                            <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                              Transaction ID: <a className="text-primary" href="#">{event.transactionId}</a>
+                            </p>
+                          )}
+                          {event.attachment && (
+                            <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                              Attachment: <a className="text-primary" href="#">{event.attachment}</a>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+              <div className="pointer-events-none fixed bottom-0 left-0 w-full bg-gradient-to-t from-background-light to-transparent dark:from-background-dark">
+                <div className="pointer-events-auto border-t border-border-light bg-background-light/80 p-4 backdrop-blur-sm dark:border-border-dark dark:bg-background-dark/80">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setShowPartModal(false)}
+                      className="flex h-12 items-center justify-center gap-2 rounded-lg border border-border-light bg-surface-light text-sm font-semibold text-content-light dark:border-border-dark dark:bg-surface-dark dark:text-content-dark"
+                    >
+                      Close
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setShowPartModal(false);
+                        handleGenerateReport('Part Details');
+                      }}
+                      className="flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-white"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Generate Report
+                    </button>
+                  </div>
+                </div>
+      </div>
+            </div>
+          </div>
+        )}
+
+        {/* Generate Report Modal - Exact Stitch AI Match */}
+        {showReportModal && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+            <div className="flex animate-slide-up flex-col rounded-t-xl bg-background-light dark:bg-background-dark w-full max-h-[90vh]">
+              <div className="flex h-12 w-full flex-col items-center justify-center p-2">
+                <div className="h-1.5 w-10 rounded-full bg-border-light dark:bg-border-dark"></div>
+              </div>
+              <div className="flex items-center justify-between border-b border-border-light px-4 pb-4 dark:border-border-dark">
+                <div className="w-8"></div>
+                <h1 className="text-lg font-bold text-content-light dark:text-content-dark">Generate Report</h1>
+                <button 
+                  onClick={() => setShowReportModal(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 pb-20">
+                <div className="space-y-6">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-content-light dark:text-content-dark" htmlFor="scope">Scope</label>
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-background-light p-1 dark:bg-background-dark">
+                      <button className="rounded-md bg-primary py-2 text-sm font-semibold text-white">All</button>
+                      <button className="rounded-md py-2 text-sm font-medium text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5">Filtered</button>
+                      <button className="rounded-md py-2 text-sm font-medium text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5">QR</button>
+                    </div>
+                    </div>
+                    <div>
+                    <label className="mb-2 block text-sm font-medium text-content-light dark:text-content-dark" htmlFor="date-range">Date Range</label>
+                    <div className="relative">
+                      <input 
+                        className="w-full rounded-lg border-border-light bg-surface-light p-3 text-content-light focus:border-primary focus:ring-primary dark:border-border-dark dark:bg-surface-dark dark:text-content-dark" 
+                        id="date-range" 
+                        placeholder="Select date range" 
+                        type="text" 
+                        value={dateRange}
+                        onChange={(e) => setDateRange(e.target.value)}
+                        readOnly
+                      />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-subtle-light dark:text-subtle-dark" />
+                    </div>
+                      </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-content-light dark:text-content-dark" htmlFor="format">Format</label>
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-background-light p-1 dark:bg-background-dark">
+                      <button 
+                        onClick={() => setReportFormat('json')}
+                        className={`rounded-md py-2 text-sm font-semibold transition-colors ${
+                          reportFormat === 'json' 
+                            ? 'bg-primary text-white' 
+                            : 'text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5'
+                        }`}
+                      >
+                        JSON
+                      </button>
+                      <button 
+                        onClick={() => setReportFormat('csv')}
+                        className={`rounded-md py-2 text-sm font-semibold transition-colors ${
+                          reportFormat === 'csv' 
+                            ? 'bg-primary text-white' 
+                            : 'text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5'
+                        }`}
+                      >
+                        CSV
+                      </button>
+                      <button 
+                        onClick={() => setReportFormat('excel')}
+                        className={`rounded-md py-2 text-sm font-semibold transition-colors ${
+                          reportFormat === 'excel' 
+                            ? 'bg-primary text-white' 
+                            : 'text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5'
+                        }`}
+                      >
+                        Excel
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-content-light dark:text-content-dark" htmlFor="blockchain-details">Include blockchain tx details?</label>
+                    <button 
+                      className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-primary transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" 
+                      role="switch"
+                    >
+                      <span className="sr-only">Include blockchain tx details</span>
+                      <span className="pointer-events-none inline-block h-5 w-5 translate-x-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                    </button>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-content-light dark:text-content-dark" htmlFor="schedule">Schedule</label>
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-background-light p-1 dark:bg-background-dark">
+                      <button className="rounded-md bg-primary py-2 text-sm font-semibold text-white">Off</button>
+                      <button className="rounded-md py-2 text-sm font-medium text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5">Daily</button>
+                      <button className="rounded-md py-2 text-sm font-medium text-subtle-light hover:bg-black/5 dark:text-subtle-dark dark:hover:bg-white/5">Weekly</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="pointer-events-none fixed bottom-0 left-0 w-full bg-gradient-to-t from-background-light to-transparent dark:from-background-dark">
+                <div className="pointer-events-auto border-t border-border-light bg-background-light/80 p-4 backdrop-blur-sm dark:border-border-dark dark:bg-background-dark/80">
+                  <button 
+                    onClick={() => generateReport(reportType)}
+                    disabled={isGenerating}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    <FileText className="h-4 w-4" />
+                    {isGenerating ? 'Generating...' : 'Generate Report'}
+                  </button>
+                </div>
+              </div>
+            </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes slide-up {
+            from {
+              transform: translateY(100%);
+            }
+            to {
+              transform: translateY(0);
+            }
+          }
+          .animate-slide-up {
+            animation: slide-up 0.3s ease-out;
+          }
+          .overflow-x-auto::-webkit-scrollbar {
+            display: none;
+          }
+          .overflow-x-auto {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `
+      }} />
     </div>
   );
 }

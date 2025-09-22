@@ -10,7 +10,17 @@ import {
   AlertTriangle, 
   Clock,
   Calendar,
-  Package
+  Package,
+  QrCode,
+  RefreshCw,
+  Download,
+  MapPin,
+  User,
+  FileText,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { blockchainService } from '../../services/blockchainService';
 import { offlineService } from '../../services/offlineService';
@@ -48,395 +58,595 @@ export function QRScanner() {
 
   const handleScan = useCallback(async (result: string) => {
     if (!result) return;
-
+    
     setLoading(true);
     setError(null);
-
+    
     try {
-      // Parse QR code data
-      const qrData: QRScanResult = JSON.parse(result);
-      setScanResult(qrData);
-
-      // Save scan to offline storage
-      await offlineService.saveQRScan({
-        partHash: qrData.partHash,
-        scannedAt: new Date(),
-        scannedBy: userData?.id || 'unknown',
-        location: 'Current Location' // In production, get actual GPS
+      const qrData = JSON.parse(result);
+      const partHash = await blockchainService.generatePartHash(qrData);
+      
+      const history = await blockchainService.getPartHistory(partHash);
+      
+      setScanResult({
+        partHash,
+        pointerURL: `https://blockchain.railtrace.com/part/${partHash}`,
+        partId: qrData.partId,
+        vendorId: qrData.vendorId,
+        lotId: qrData.batchNumber,
+        manufactureDate: qrData.timestamp,
+        specifications: {
+          material: qrData.material,
+          details: qrData.specifications
+        }
       });
-
-      // Verify part on blockchain
-      const verification = await blockchainService.verifyPart(qrData.partHash);
-      setVerificationStatus(verification.status);
-
-      // Get part history
-      const history = await blockchainService.getPartHistory(qrData.partHash);
-      setPartHistory(history.map(event => ({
-        eventType: getEventTypeName(event.status),
-        timestamp: event.timestamp,
-        data: JSON.parse(event.data || '{}'),
-        verified: true
-      })));
-
-      setIsScanning(false);
-    } catch (error) {
-      console.error('Error processing QR scan:', error);
-      setError('Invalid QR code or failed to verify part');
+      
+      setPartHistory(history);
+      setVerificationStatus('verified');
+    } catch (err) {
+      console.error('Scan processing failed:', err);
+      setError('Failed to process QR code. Please try again.');
+      setVerificationStatus('invalid');
     } finally {
       setLoading(false);
     }
-  }, [userData]);
+  }, []);
 
-  const getEventTypeName = (status: number): string => {
-    const eventTypes = {
-      0: 'Registered',
-      1: 'Received',
-      2: 'Installed', 
-      3: 'Inspected',
-      4: 'Retired'
-    };
-    return eventTypes[status as keyof typeof eventTypes] || 'Unknown';
+  const handleAction = async (actionType: 'receive' | 'install' | 'inspect') => {
+    if (!scanResult) return;
+    
+    setActionLoading(true);
+    
+    try {
+      let formData;
+      switch (actionType) {
+        case 'receive':
+          formData = receiptForm;
+          break;
+        case 'install':
+          formData = installForm;
+          break;
+        case 'inspect':
+          formData = inspectForm;
+          break;
+      }
+      
+      await blockchainService.updatePartStatus(scanResult.partHash, actionType, formData);
+      
+      // Refresh history
+      const history = await blockchainService.getPartHistory(scanResult.partHash);
+      setPartHistory(history);
+      
+    } catch (err) {
+      console.error('Action failed:', err);
+      setError('Action failed. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const getVerificationBadge = () => {
-    switch (verificationStatus) {
+  const getEventIcon = (eventType: string) => {
+    switch (eventType) {
+      case 'manufacture':
+        return <Package className="h-4 w-4" />;
+      case 'receive':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'install':
+        return <Shield className="h-4 w-4" />;
+      case 'inspect':
+        return <CheckCircle2 className="h-4 w-4" />;
+      case 'retire':
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const getEventColor = (eventType: string) => {
+    switch (eventType) {
+      case 'manufacture':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
+      case 'receive':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+      case 'install':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
+      case 'inspect':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+      case 'retire':
+        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
       case 'verified':
-        return (
-          <Badge variant="success" className="flex items-center gap-1">
-            <CheckCircle className="h-3 w-3" />
-            Blockchain Verified
-          </Badge>
-        );
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'pending':
-        return (
-          <Badge variant="warning" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Pending Verification
-          </Badge>
-        );
+        return <Clock className="h-5 w-5 text-yellow-500" />;
       case 'invalid':
-        return (
-          <Badge variant="error" className="flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Invalid/Unverified
-          </Badge>
-        );
-    }
-  };
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString();
-  };
-
-  const submitDepotReceipt = async () => {
-    if (!scanResult) return;
-    setActionLoading(true);
-    try {
-      await blockchainService.receivePart({
-        partHash: scanResult.partHash,
-        depotId: receiptForm.depotId || 'DEPOT-UNKNOWN',
-        officerId: receiptForm.officerId || (userData?.id ?? 'officer'),
-        location: receiptForm.location || 'Unknown',
-        condition: receiptForm.condition
-      });
-    } catch {
-      setError('Failed to record receipt');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const submitInstallation = async () => {
-    if (!scanResult) return;
-    setActionLoading(true);
-    try {
-      await blockchainService.installPart({
-        partHash: scanResult.partHash,
-        gps: { latitude: Number(installForm.latitude), longitude: Number(installForm.longitude) },
-        engineerId: installForm.engineerId || (userData?.id ?? 'engineer'),
-        trackSection: installForm.trackSection
-      });
-    } catch {
-      setError('Failed to record installation');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const submitInspection = async () => {
-    if (!scanResult) return;
-    setActionLoading(true);
-    try {
-      await blockchainService.inspectPart({
-        partHash: scanResult.partHash,
-        inspectorId: inspectForm.inspectorId || (userData?.id ?? 'inspector'),
-        resultCode: Number(inspectForm.resultCode),
-        defectType: inspectForm.defectType || undefined,
-        severity: Number(inspectForm.severity),
-        mediaHashes: [],
-        notes: inspectForm.notes
-      });
-    } catch {
-      setError('Failed to record inspection');
-    } finally {
-      setActionLoading(false);
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      default:
+        return <Clock className="h-5 w-5 text-gray-500" />;
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">QR Code Scanner</h2>
-        <p className="text-gray-600 mt-1">Scan railway fitting QR codes to view lifecycle history</p>
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-foreground-light dark:text-foreground-dark font-display mb-2">
+          QR Code Scanner
+        </h1>
+        <p className="text-subtle-light dark:text-subtle-dark">
+          Scan QR codes to track railway fittings and update their status
+        </p>
       </div>
 
-      {/* Scanner Controls */}
+      {/* Scanner Section */}
       <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Camera className="h-5 w-5 text-blue-600" />
-            Camera Scanner
-          </h3>
+        <CardHeader 
+          title="QR Code Scanner" 
+          subtitle="Position the QR code within the camera view"
+        >
+          <div className="flex items-center gap-2">
+            <Badge variant="info" size="sm">
+              <Camera className="h-3 w-3 mr-1" />
+              Live Scan
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsScanning(!isScanning)}
+            >
+              {isScanning ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Stop Scanner
+                </>
+              ) : (
+                <>
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Start Scanner
+                </>
+              )}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="text-center">
-            {!isScanning ? (
-              <div className="space-y-4">
-                <div className="w-32 h-32 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
-                  <Camera className="h-16 w-16 text-gray-400" />
-                </div>
-                <Button
-                  onClick={() => setIsScanning(true)}
-                  className="w-full"
-                  leftIcon={<Camera className="h-4 w-4" />}
-                >
-                  Start Scanning
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="relative">
-                  <Scanner
-                    onResult={(text) => handleScan(String(text))}
-                    onError={(error) => setError(error?.message || 'Scanner error')}
-                    containerStyle={{
+          <div className="space-y-4">
+            {isScanning && (
+              <div className="relative">
+                <Scanner
+                  onDecode={handleScan}
+                  onError={(error) => {
+                    console.error('Scanner error:', error);
+                    setError('Camera access denied or scanner error');
+                  }}
+                  components={{
+                    audio: false,
+                    finder: true,
+                    tracker: true
+                  }}
+                  styles={{
+                    container: {
                       width: '100%',
-                      maxWidth: '400px',
-                      margin: '0 auto'
-                    }}
-                  />
-                  {loading && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
-                      <div className="text-white text-center">
-                        <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-2" />
-                        <p>Processing...</p>
-                      </div>
-                    </div>
-                  )}
+                      height: '300px',
+                      borderRadius: '0.5rem',
+                      overflow: 'hidden'
+                    }
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-48 h-48 border-2 border-primary rounded-lg opacity-50"></div>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsScanning(false)}
-                  className="w-full"
-                >
-                  Stop Scanning
-                </Button>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-danger-light/10 border border-danger-light/20 rounded-lg p-4">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-danger-light mr-2" />
+                  <span className="text-danger-light">{error}</span>
+                </div>
+              </div>
+            )}
+
+            {loading && (
+              <div className="text-center py-8">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+                <p className="text-subtle-light dark:text-subtle-dark">Processing QR code...</p>
               </div>
             )}
           </div>
-
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {error}
-            </div>
-          )}
         </CardContent>
       </Card>
 
       {/* Scan Results */}
       {scanResult && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <>
           {/* Part Information */}
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Package className="h-5 w-5 text-green-600" />
-                  Part Information
-                </h3>
-                {getVerificationBadge()}
+            <CardHeader 
+              title="Part Information" 
+              subtitle="Details from scanned QR code"
+            >
+              <div className="flex items-center gap-2">
+                {getStatusIcon(verificationStatus)}
+                <Badge className={verificationStatus === 'verified' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'}>
+                  {verificationStatus === 'verified' ? 'Verified' : 'Pending Verification'}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   <div>
-                    <p className="text-gray-500">Part ID</p>
-                    <p className="font-medium text-gray-900">{scanResult.partId}</p>
+                    <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                      Part ID
+                    </label>
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark font-mono">
+                      {scanResult.partId}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Vendor ID</p>
-                    <p className="font-medium text-gray-900">{scanResult.vendorId}</p>
+                    <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                      Vendor ID
+                    </label>
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                      {scanResult.vendorId}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Lot Number</p>
-                    <p className="font-medium text-gray-900">{scanResult.lotId}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Manufacture Date</p>
-                    <p className="font-medium text-gray-900">
-                      {new Date(scanResult.manufactureDate).toLocaleDateString()}
+                    <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                      Lot ID
+                    </label>
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                      {scanResult.lotId}
                     </p>
                   </div>
                 </div>
-
-                {scanResult.specifications && (
+                <div className="space-y-4">
                   <div>
-                    <p className="text-gray-500 text-sm mb-2">Specifications</p>
-                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                      <pre className="whitespace-pre-wrap text-gray-700">
-                        {JSON.stringify(scanResult.specifications, null, 2)}
-                      </pre>
-                    </div>
+                    <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                      Manufacture Date
+                    </label>
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                      {new Date(scanResult.manufactureDate).toLocaleDateString()}
+                    </p>
                   </div>
-                )}
-
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Shield className="h-4 w-4" />
-                  <span>Hash: {scanResult.partHash.substring(0, 16)}...</span>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                      Material
+                    </label>
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                      {scanResult.specifications.material || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                      Blockchain Hash
+                    </label>
+                    <p className="text-xs text-subtle-light dark:text-subtle-dark font-mono break-all">
+                      {scanResult.partHash}
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Lifecycle History */}
+          {/* Part History Timeline */}
           <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Clock className="h-5 w-5 text-blue-600" />
-                Lifecycle History
-              </h3>
+            <CardHeader title="Part History" subtitle="Complete lifecycle timeline">
+              <Badge variant="default" size="sm">
+                <Calendar className="h-3 w-3 mr-1" />
+                {partHistory.length} Events
+              </Badge>
             </CardHeader>
             <CardContent>
-              {partHistory.length > 0 ? (
-                <div className="space-y-4">
-                  {partHistory.map((event, index) => (
-                    <div key={index} className="flex items-start space-x-3 pb-4 border-b border-gray-100 last:border-b-0">
-                      <div className="flex-shrink-0">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          event.verified ? 'bg-green-100' : 'bg-yellow-100'
-                        }`}>
-                          {event.verified ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Clock className="h-4 w-4 text-yellow-600" />
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-gray-900">{event.eventType}</p>
-                          <Badge variant={event.verified ? 'success' : 'warning'} size="sm">
-                            {event.verified ? 'Verified' : 'Pending'}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(event.timestamp)}
-                        </p>
-                        {event.data && Object.keys(event.data).length > 0 && (
-                          <div className="mt-2 text-xs text-gray-500">
-                            {Object.entries(event.data).map(([key, value]) => (
-                              <div key={key} className="flex items-center gap-1">
-                                <span className="capitalize">{key}:</span>
-                                <span>{String(value)}</span>
-                              </div>
-                            ))}
+              <div className="space-y-4">
+                {partHistory.length > 0 ? (
+                  <div className="relative">
+                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border-light dark:bg-border-dark"></div>
+                    <div className="space-y-6">
+                      {partHistory.map((event, index) => (
+                        <div key={index} className="relative flex items-start">
+                          <div className="absolute left-3 top-1 flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary">
+                            {getEventIcon(event.eventType)}
                           </div>
-                        )}
-                      </div>
+                          <div className="ml-12 pt-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-foreground-light dark:text-foreground-dark capitalize">
+                                {event.eventType.replace('_', ' ')}
+                              </h4>
+                              <Badge className={getEventColor(event.eventType)} size="sm">
+                                {event.verified ? 'Verified' : 'Pending'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-subtle-light dark:text-subtle-dark mb-2">
+                              {new Date(event.timestamp).toLocaleString()}
+                            </p>
+                            {Object.keys(event.data).length > 0 && (
+                              <div className="bg-surface-light dark:bg-surface-dark rounded-lg p-3 text-xs">
+                                <pre className="text-subtle-light dark:text-subtle-dark">
+                                  {JSON.stringify(event.data, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No lifecycle events found</p>
-                  <p className="text-sm text-gray-400">This part may not be registered on the blockchain</p>
-                </div>
-              )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-subtle-light dark:text-subtle-dark">No history found for this part</p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
-        </div>
-      )}
 
-      {/* Role-based Actions */}
-      {scanResult && userData?.role === 'depot' && (
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Record Receipt</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <input className="px-3 py-2 border rounded-lg" placeholder="Depot ID" value={receiptForm.depotId} onChange={e=>setReceiptForm({...receiptForm, depotId: e.target.value})} />
-              <input className="px-3 py-2 border rounded-lg" placeholder="Officer ID" value={receiptForm.officerId} onChange={e=>setReceiptForm({...receiptForm, officerId: e.target.value})} />
-              <input className="px-3 py-2 border rounded-lg" placeholder="Location" value={receiptForm.location} onChange={e=>setReceiptForm({...receiptForm, location: e.target.value})} />
-              <select className="px-3 py-2 border rounded-lg" value={receiptForm.condition} onChange={e=>setReceiptForm({...receiptForm, condition: e.target.value as 'good' | 'damaged' | 'rejected'})}>
-                <option value="good">Good</option>
-                <option value="damaged">Damaged</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-            <Button className="mt-3" onClick={submitDepotReceipt} loading={actionLoading}>Record Receipt</Button>
-          </CardContent>
-        </Card>
-      )}
+          {/* Action Forms */}
+          <Card>
+            <CardHeader title="Update Part Status" subtitle="Perform actions on the scanned part">
+              <Badge variant="primary" size="sm">
+                <Shield className="h-3 w-3 mr-1" />
+                Blockchain Actions
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Receive Form */}
+                <div className="bg-surface-light dark:bg-surface-dark rounded-lg p-4 border border-border-light dark:border-border-dark">
+                  <h4 className="font-semibold text-foreground-light dark:text-foreground-dark mb-3 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    Receive at Depot
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Depot ID
+                      </label>
+                      <input
+                        type="text"
+                        value={receiptForm.depotId}
+                        onChange={(e) => setReceiptForm(prev => ({ ...prev, depotId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="DEPOT-001"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Officer ID
+                      </label>
+                      <input
+                        type="text"
+                        value={receiptForm.officerId}
+                        onChange={(e) => setReceiptForm(prev => ({ ...prev, officerId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="OFFICER-001"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Location
+                      </label>
+                      <input
+                        type="text"
+                        value={receiptForm.location}
+                        onChange={(e) => setReceiptForm(prev => ({ ...prev, location: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="Storage Area A"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Condition
+                      </label>
+                      <select
+                        value={receiptForm.condition}
+                        onChange={(e) => setReceiptForm(prev => ({ ...prev, condition: e.target.value as 'good' | 'damaged' | 'rejected' }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                      >
+                        <option value="good">Good</option>
+                        <option value="damaged">Damaged</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleAction('receive')}
+                    disabled={actionLoading || !receiptForm.depotId || !receiptForm.officerId}
+                    size="sm"
+                  >
+                    {actionLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Mark as Received
+                      </>
+                    )}
+                  </Button>
+                </div>
 
-      {scanResult && userData?.role === 'engineer' && (
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Record Installation</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <input className="px-3 py-2 border rounded-lg" placeholder="Engineer ID" value={installForm.engineerId} onChange={e=>setInstallForm({...installForm, engineerId: e.target.value})} />
-              <input className="px-3 py-2 border rounded-lg" placeholder="Track Section" value={installForm.trackSection} onChange={e=>setInstallForm({...installForm, trackSection: e.target.value})} />
-              <input className="px-3 py-2 border rounded-lg" placeholder="Latitude" value={installForm.latitude} onChange={e=>setInstallForm({...installForm, latitude: e.target.value})} />
-              <input className="px-3 py-2 border rounded-lg" placeholder="Longitude" value={installForm.longitude} onChange={e=>setInstallForm({...installForm, longitude: e.target.value})} />
-            </div>
-            <Button className="mt-3" onClick={submitInstallation} loading={actionLoading}>Record Installation</Button>
-          </CardContent>
-        </Card>
-      )}
+                {/* Install Form */}
+                <div className="bg-surface-light dark:bg-surface-dark rounded-lg p-4 border border-border-light dark:border-border-dark">
+                  <h4 className="font-semibold text-foreground-light dark:text-foreground-dark mb-3 flex items-center">
+                    <Shield className="h-4 w-4 mr-2 text-blue-500" />
+                    Install on Track
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Engineer ID
+                      </label>
+                      <input
+                        type="text"
+                        value={installForm.engineerId}
+                        onChange={(e) => setInstallForm(prev => ({ ...prev, engineerId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="ENG-001"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Track Section
+                      </label>
+                      <input
+                        type="text"
+                        value={installForm.trackSection}
+                        onChange={(e) => setInstallForm(prev => ({ ...prev, trackSection: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="A-12-B"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Latitude
+                      </label>
+                      <input
+                        type="text"
+                        value={installForm.latitude}
+                        onChange={(e) => setInstallForm(prev => ({ ...prev, latitude: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="19.0760"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Longitude
+                      </label>
+                      <input
+                        type="text"
+                        value={installForm.longitude}
+                        onChange={(e) => setInstallForm(prev => ({ ...prev, longitude: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="72.8777"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleAction('install')}
+                    disabled={actionLoading || !installForm.engineerId || !installForm.trackSection}
+                    size="sm"
+                  >
+                    {actionLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Mark as Installed
+                      </>
+                    )}
+                  </Button>
+                </div>
 
-      {scanResult && userData?.role === 'inspector' && (
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Record Inspection</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <input className="px-3 py-2 border rounded-lg" placeholder="Inspector ID" value={inspectForm.inspectorId} onChange={e=>setInspectForm({...inspectForm, inspectorId: e.target.value})} />
-              <select className="px-3 py-2 border rounded-lg" value={inspectForm.resultCode} onChange={e=>setInspectForm({...inspectForm, resultCode: e.target.value})}>
-                <option value="0">Pass</option>
-                <option value="1">Fail</option>
-                <option value="2">Defective</option>
-              </select>
-              <input className="px-3 py-2 border rounded-lg" placeholder="Defect Type (optional)" value={inspectForm.defectType} onChange={e=>setInspectForm({...inspectForm, defectType: e.target.value})} />
-              <select className="px-3 py-2 border rounded-lg" value={inspectForm.severity} onChange={e=>setInspectForm({...inspectForm, severity: e.target.value})}>
-                <option value="1">Severity 1</option>
-                <option value="2">Severity 2</option>
-                <option value="3">Severity 3</option>
-                <option value="4">Severity 4</option>
-                <option value="5">Severity 5</option>
-              </select>
-              <input className="px-3 py-2 border rounded-lg" placeholder="Notes" value={inspectForm.notes} onChange={e=>setInspectForm({...inspectForm, notes: e.target.value})} />
-            </div>
-            <Button className="mt-3" onClick={submitInspection} loading={actionLoading}>Record Inspection</Button>
-          </CardContent>
-        </Card>
+                {/* Inspect Form */}
+                <div className="bg-surface-light dark:bg-surface-dark rounded-lg p-4 border border-border-light dark:border-border-dark">
+                  <h4 className="font-semibold text-foreground-light dark:text-foreground-dark mb-3 flex items-center">
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-yellow-500" />
+                    Inspect Part
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Inspector ID
+                      </label>
+                      <input
+                        type="text"
+                        value={inspectForm.inspectorId}
+                        onChange={(e) => setInspectForm(prev => ({ ...prev, inspectorId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="INS-001"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Result Code
+                      </label>
+                      <select
+                        value={inspectForm.resultCode}
+                        onChange={(e) => setInspectForm(prev => ({ ...prev, resultCode: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                      >
+                        <option value="0">Pass</option>
+                        <option value="1">Fail</option>
+                        <option value="2">Conditional</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Defect Type
+                      </label>
+                      <input
+                        type="text"
+                        value={inspectForm.defectType}
+                        onChange={(e) => setInspectForm(prev => ({ ...prev, defectType: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                        placeholder="Wear, Crack, etc."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                        Severity
+                      </label>
+                      <select
+                        value={inspectForm.severity}
+                        onChange={(e) => setInspectForm(prev => ({ ...prev, severity: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm"
+                      >
+                        <option value="1">Low</option>
+                        <option value="2">Medium</option>
+                        <option value="3">High</option>
+                        <option value="4">Critical</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1">
+                      Notes
+                    </label>
+                    <textarea
+                      value={inspectForm.notes}
+                      onChange={(e) => setInspectForm(prev => ({ ...prev, notes: e.target.value }))}
+                      className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark text-sm h-20 resize-none"
+                      placeholder="Additional inspection notes..."
+                    />
+                  </div>
+                  <Button
+                    onClick={() => handleAction('inspect')}
+                    disabled={actionLoading || !inspectForm.inspectorId}
+                    size="sm"
+                  >
+                    {actionLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Record Inspection
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
-
     </div>
   );
 }

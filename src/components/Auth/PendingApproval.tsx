@@ -6,7 +6,37 @@ import { Button } from '../ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 
 export function PendingApproval() {
-  const { userData, logout } = useAuth();
+  const { userData, logout, loading } = useAuth();
+
+  // Show loading state while user data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading account details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if no user data is available
+  if (!userData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Shield className="h-8 w-8 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Account Error</h1>
+          <p className="text-gray-600 mb-4">Unable to load account details. Please try again.</p>
+          <Button onClick={logout} className="w-full">
+            Sign Out
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -42,12 +72,40 @@ export function PendingApproval() {
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-2">Account Details:</h3>
-              <div className="space-y-1 text-sm text-gray-600 text-left">
-                <p><strong>Name:</strong> {userData?.name}</p>
-                <p><strong>Email:</strong> {userData?.email}</p>
-                <p><strong>Role:</strong> {userData?.role}</p>
-                <p><strong>Organization:</strong> {userData?.organizationName}</p>
+              <h3 className="font-medium text-gray-900 mb-3">Account Details:</h3>
+              <div className="space-y-2 text-sm text-gray-700 text-left">
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-medium text-gray-600">Name:</span>
+                  <span className="text-gray-900 font-semibold">{userData.name || 'Not provided'}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-medium text-gray-600">Email:</span>
+                  <span className="text-gray-900 font-semibold">{userData.email || 'Not provided'}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-medium text-gray-600">Role:</span>
+                  <span className="text-gray-900 font-semibold capitalize">{userData.role || 'Not provided'}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-medium text-gray-600">Organization:</span>
+                  <span className="text-gray-900 font-semibold">{userData.organizationName || 'Not provided'}</span>
+                </div>
+                {userData.organizationId && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="font-medium text-gray-600">Organization ID:</span>
+                    <span className="text-gray-900 font-semibold text-xs">{userData.organizationId}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Debug section - remove this in production */}
+              <div className="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <details>
+                  <summary className="cursor-pointer font-medium text-yellow-800">Debug: Raw User Data</summary>
+                  <pre className="mt-2 text-xs text-yellow-700 overflow-auto">
+                    {JSON.stringify(userData, null, 2)}
+                  </pre>
+                </details>
               </div>
             </div>
 

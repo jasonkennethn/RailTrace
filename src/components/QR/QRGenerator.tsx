@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { Download, Package, Shield } from 'lucide-react';
+import { Download, Package, Shield, QrCode, Copy, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { blockchainService } from '../../services/blockchainService';
 
 interface QRData {
@@ -30,14 +30,18 @@ export function QRGenerator({ onGenerate }: QRGeneratorProps) {
     id: string;
     qrCode: string;
     dataUrl: string;
+    timestamp: Date;
   }>>([]);
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationStatus, setRegistrationStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const registerBatchOnChain = async () => {
     if (generatedQRs.length === 0) return;
     setIsRegistering(true);
+    setRegistrationStatus('idle');
+    
     try {
       for (const item of generatedQRs) {
         const registration = {
@@ -50,275 +54,353 @@ export function QRGenerator({ onGenerate }: QRGeneratorProps) {
             details: formData.specifications
           }
         };
+        
         await blockchainService.registerPart(registration);
       }
-    } catch (e) {
-      console.error('Batch registration failed:', e);
+      setRegistrationStatus('success');
+    } catch (error) {
+      console.error('Registration failed:', error);
+      setRegistrationStatus('error');
     } finally {
       setIsRegistering(false);
     }
   };
 
-  const generateQRCodes = async () => {
+  const generateQRCode = async (data: string): Promise<string> => {
+    try {
+      const dataUrl = await QRCode.toDataURL(data, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#1773cf',
+          light: '#ffffff'
+        }
+      });
+      return dataUrl;
+    } catch (error) {
+      console.error('QR generation failed:', error);
+      throw error;
+    }
+  };
+
+  const handleGenerate = async () => {
     if (!formData.batchNumber || !formData.quantity) return;
     
     setIsGenerating(true);
-    
+    const quantity = parseInt(formData.quantity);
+    const newQRs: Array<{
+      id: string;
+      qrCode: string;
+      dataUrl: string;
+      timestamp: Date;
+    }> = [];
+
     try {
-      const quantity = parseInt(formData.quantity);
-      const qrCodes = [];
-      
-      for (let i = 1; i <= quantity; i++) {
-        const partId = `${formData.batchNumber}-${String(i).padStart(4, '0')}`;
-        const manufactureDate = new Date();
-        const partRegistration = {
+      for (let i = 0; i < quantity; i++) {
+        const partId = `${formData.batchNumber}-${String(i + 1).padStart(3, '0')}`;
+        const qrData = JSON.stringify({
           partId,
-          vendorId: formData.vendorId,
-          lotId: formData.batchNumber,
-          manufactureDate,
-          specifications: {
-            material: formData.material,
-            details: formData.specifications
-          }
-        } as const;
-
-        // Compute deterministic partHash used by scanner and chain
-        const partHash = blockchainService.generatePartHash(partRegistration);
-
-        const qrData = {
-          partHash,
-          pointerURL: `https://railtrace.gov.in/parts/${encodeURIComponent(partId)}`,
-          partId,
-          vendorId: formData.vendorId,
-          lotId: formData.batchNumber,
-          manufactureDate: manufactureDate.toISOString(),
-          specifications: partRegistration.specifications,
-          type: formData.fittingType
-        };
-
-        const qrString = JSON.stringify(qrData);
-        const dataUrl = await QRCode.toDataURL(qrString, {
-          width: 256,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF'
-          }
-        });
-        
-        qrCodes.push({
-          id: partId,
-          qrCode: qrString,
-          dataUrl: dataUrl
-        });
-      }
-      
-      setGeneratedQRs(qrCodes);
-      
-      // Optional: notify parent for blockchain logging/registration
-      if (onGenerate) {
-        onGenerate({
           batchNumber: formData.batchNumber,
-          qrCodes: qrCodes,
-          vendorId: formData.vendorId
+          fittingType: formData.fittingType,
+          vendorId: formData.vendorId,
+          material: formData.material,
+          specifications: formData.specifications,
+          timestamp: new Date().toISOString()
+        });
+
+        const dataUrl = await generateQRCode(qrData);
+        
+        newQRs.push({
+          id: partId,
+          qrCode: qrData,
+          dataUrl,
+          timestamp: new Date()
         });
       }
+
+      setGeneratedQRs(prev => [...prev, ...newQRs]);
       
+      if (onGenerate && newQRs.length > 0) {
+        onGenerate(newQRs[0]);
+      }
     } catch (error) {
-      console.error('Error generating QR codes:', error);
+      console.error('QR generation failed:', error);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const downloadQRCode = (qrData: QRData) => {
+  const downloadQR = (qr: { id: string; dataUrl: string }) => {
     const link = document.createElement('a');
-    link.href = qrData.dataUrl;
-    link.download = `QR_${qrData.id}.png`;
-    document.body.appendChild(link);
+    link.download = `qr-${qr.id}.png`;
+    link.href = qr.dataUrl;
     link.click();
-    document.body.removeChild(link);
   };
 
-  const downloadAllQRCodes = () => {
+  const downloadAllQRs = () => {
     generatedQRs.forEach((qr, index) => {
-      setTimeout(() => downloadQRCode(qr, index), index * 100);
+      setTimeout(() => downloadQR(qr), index * 100);
     });
   };
 
+  const copyQRData = (qr: { qrCode: string }) => {
+    navigator.clipboard.writeText(qr.qrCode);
+  };
+
+  const clearGenerated = () => {
+    setGeneratedQRs([]);
+    setRegistrationStatus('idle');
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">QR Code Generator</h2>
-        <p className="text-gray-600 mt-1">Generate QR codes for railway fittings batch</p>
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-foreground-light dark:text-foreground-dark font-display mb-2">
+          QR Code Generator
+        </h1>
+        <p className="text-subtle-light dark:text-subtle-dark">
+          Generate QR codes for railway fittings and register them on the blockchain
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Form */}
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Package className="h-5 w-5 text-blue-600" />
-              Batch Information
-            </h3>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4">
+      {/* Generation Form */}
+      <Card>
+        <CardHeader title="Generate QR Codes" subtitle="Enter batch details to generate QR codes">
+          <Badge variant="info" size="sm">
+            <QrCode className="h-3 w-3 mr-1" />
+            Batch Generation
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-2">
                   Batch Number *
                 </label>
                 <input
                   type="text"
                   value={formData.batchNumber}
-                  onChange={(e) => setFormData({...formData, batchNumber: e.target.value})}
-                  placeholder="e.g., RT-2024-001"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setFormData(prev => ({ ...prev, batchNumber: e.target.value }))}
+                  className="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., BATCH-2024-001"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fitting Type *
+                <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-2">
+                  Fitting Type
                 </label>
                 <select
                   value={formData.fittingType}
-                  onChange={(e) => setFormData({...formData, fittingType: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setFormData(prev => ({ ...prev, fittingType: e.target.value }))}
+                  className="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="clip">Rail Clip</option>
-                  <option value="pad">Pad</option>
-                  <option value="liner">Liner</option>
-                  <option value="sleeper">Sleeper</option>
+                  <option value="bolt">Rail Bolt</option>
+                  <option value="plate">Rail Plate</option>
+                  <option value="sleeper">Concrete Sleeper</option>
+                  <option value="bearing">Bearing</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-2">
                   Quantity *
                 </label>
                 <input
                   type="number"
                   value={formData.quantity}
-                  onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                  placeholder="e.g., 50"
+                  onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value }))}
+                  className="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Number of QR codes to generate"
                   min="1"
-                  max="1000"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  max="100"
                 />
               </div>
+            </div>
 
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-2">
                   Material
                 </label>
                 <input
                   type="text"
                   value={formData.material}
-                  onChange={(e) => setFormData({...formData, material: e.target.value})}
-                  placeholder="e.g., High Carbon Steel"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
+                  className="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., Steel, Iron, Concrete"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-2">
                   Specifications
                 </label>
                 <textarea
                   value={formData.specifications}
-                  onChange={(e) => setFormData({...formData, specifications: e.target.value})}
-                  placeholder="Additional specifications and notes"
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setFormData(prev => ({ ...prev, specifications: e.target.value }))}
+                  className="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-transparent h-20 resize-none"
+                  placeholder="Additional specifications or notes"
                 />
               </div>
 
-              <Button
-                onClick={generateQRCodes}
-                loading={isGenerating}
-                disabled={!formData.batchNumber || !formData.quantity}
-                className="w-full"
-              >
-                Generate QR Codes
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleGenerate}
+                  disabled={!formData.batchNumber || !formData.quantity || isGenerating}
+                  className="flex-1"
+                >
+                  {isGenerating ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Generate QR Codes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Generated QR Codes */}
+      {/* Generated QR Codes */}
+      {generatedQRs.length > 0 && (
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Shield className="h-5 w-5 text-green-600" />
-                Generated QR Codes
-              </h3>
-              {generatedQRs.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={downloadAllQRCodes}
-                    leftIcon={<Download className="h-4 w-4" />}
-                  >
-                    Download All
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={registerBatchOnChain}
-                    loading={isRegistering}
-                  >
-                    Register Batch on Blockchain
-                  </Button>
-                </div>
-              )}
+          <CardHeader 
+            title="Generated QR Codes" 
+            subtitle={`${generatedQRs.length} QR codes generated`}
+          >
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={downloadAllQRs}>
+                <Download className="h-4 w-4 mr-2" />
+                Download All
+              </Button>
+              <Button variant="outline" size="sm" onClick={clearGenerated}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {generatedQRs.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge variant="success">Generated</Badge>
-                  <span className="text-sm text-gray-600">
-                    {generatedQRs.length} QR codes ready
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                  {generatedQRs.map((qr, index) => (
-                    <div key={qr.id} className="border border-gray-200 rounded-lg p-3 text-center">
-                      <img 
-                        src={qr.dataUrl} 
-                        alt={`QR Code ${qr.id}`} 
-                        className="w-24 h-24 mx-auto mb-2"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {generatedQRs.map((qr) => (
+                <div
+                  key={qr.id}
+                  className="bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark p-4"
+                >
+                  <div className="text-center">
+                    <div className="mb-3">
+                      <img
+                        src={qr.dataUrl}
+                        alt={`QR Code for ${qr.id}`}
+                        className="mx-auto border border-border-light dark:border-border-dark rounded-lg"
                       />
-                      <p className="text-xs font-mono text-gray-600 truncate" title={qr.id}>
-                        {qr.id}
-                      </p>
+                    </div>
+                    <h4 className="font-semibold text-foreground-light dark:text-foreground-dark mb-1">
+                      {qr.id}
+                    </h4>
+                    <p className="text-xs text-subtle-light dark:text-subtle-dark mb-3">
+                      Generated: {qr.timestamp.toLocaleString()}
+                    </p>
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => downloadQRCode(qr, index)}
-                        className="mt-2 w-full"
+                        onClick={() => downloadQR(qr)}
+                        className="flex-1"
                       >
                         <Download className="h-3 w-3 mr-1" />
                         Download
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyQRData(qr)}
+                        className="flex-1"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-2">No QR codes generated yet</p>
-                <p className="text-sm text-gray-400">Fill out the batch information and click generate</p>
-              </div>
-            )}
+              ))}
+            </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {/* Blockchain Registration */}
+      {generatedQRs.length > 0 && (
+        <Card>
+          <CardHeader 
+            title="Blockchain Registration" 
+            subtitle="Register generated QR codes on the blockchain"
+          >
+            <Badge variant="primary" size="sm">
+              <Shield className="h-3 w-3 mr-1" />
+              Secure Registration
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-lg p-4 border border-border-light dark:border-border-dark">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-foreground-light dark:text-foreground-dark">
+                    Registration Status
+                  </span>
+                  {registrationStatus === 'success' && (
+                    <Badge variant="success" size="sm">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Registered
+                    </Badge>
+                  )}
+                  {registrationStatus === 'error' && (
+                    <Badge variant="error" size="sm">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Failed
+                    </Badge>
+                  )}
+                  {registrationStatus === 'idle' && (
+                    <Badge variant="default" size="sm">
+                      Pending
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                  {generatedQRs.length} QR codes ready for blockchain registration
+                </p>
+              </div>
+
+              <Button
+                onClick={registerBatchOnChain}
+                disabled={isRegistering || registrationStatus === 'success'}
+                className="w-full"
+              >
+                {isRegistering ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Registering on Blockchain...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Register on Blockchain
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -23,6 +23,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loadingStep, setLoadingStep] = useState('');
 
   const { register } = useAuth();
 
@@ -55,7 +56,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
         name: formData.name,
         role: formData.role,
         organizationName: formData.organizationName,
-        organizationId: formData.organizationId || undefined
+        ...(formData.organizationId && { organizationId: formData.organizationId })
       });
       
       console.log('User registration completed successfully');

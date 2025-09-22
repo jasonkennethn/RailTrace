@@ -28,26 +28,26 @@ export function StatsCard({
   badge 
 }: StatsCardProps) {
   return (
-    <Card hover className="relative overflow-hidden">
+    <Card className="group relative overflow-hidden bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-3">
               <p className="text-sm font-medium text-gray-600">{title}</p>
               {badge && (
-                <Badge variant={badge.variant} size="sm">
+                <Badge variant={badge.variant} size="sm" className="text-xs">
                   {badge.text}
                 </Badge>
               )}
             </div>
             
-            <div className="flex items-baseline gap-2">
-              <p className="text-2xl font-bold text-gray-900">{value}</p>
+            <div className="flex items-baseline gap-2 mb-2">
+              <p className="text-3xl font-bold text-gray-900">{value}</p>
               {trend && (
-                <div className={`flex items-center text-xs font-medium ${
+                <div className={`flex items-center text-xs font-medium px-2 py-1 rounded-full ${
                   trend.isGood 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
+                    ? 'text-green-700 bg-green-100' 
+                    : 'text-red-700 bg-red-100'
                 }`}>
                   {trend.direction === 'up' ? (
                     <TrendingUp className="h-3 w-3 mr-1" />
@@ -60,20 +60,21 @@ export function StatsCard({
             </div>
             
             {subtitle && (
-              <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+              <p className="text-xs text-gray-500">{subtitle}</p>
             )}
           </div>
           
           {icon && (
-            <div className="text-gray-400">
+            <div className="text-gray-400 group-hover:text-gray-600 transition-colors duration-200">
               {icon}
             </div>
           )}
         </div>
       </CardContent>
       
-      {/* Subtle background pattern */}
-      <div className="absolute top-0 right-0 -m-2 w-16 h-16 bg-gradient-to-br from-blue-50 to-transparent rounded-full opacity-50" />
+      {/* Modern gradient background pattern */}
+      <div className="absolute top-0 right-0 -m-4 w-20 h-20 bg-gradient-to-br from-blue-100/30 to-purple-100/30 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
+      <div className="absolute bottom-0 left-0 -m-2 w-12 h-12 bg-gradient-to-tr from-indigo-100/20 to-cyan-100/20 rounded-full opacity-40" />
     </Card>
   );
 }

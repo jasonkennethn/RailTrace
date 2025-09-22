@@ -1,0 +1,302 @@
+/* Stitch AI Mobile Backup Styles - Ultra Small Screens (< 340px) */
+/* This file provides clean, minimal styling for very small mobile devices */
+
+/* Global Mobile Backup Variables */
+:root {
+  --mobile-spacing-xs: 0.25rem;  /* 4px */
+  --mobile-spacing-sm: 0.5rem;   /* 8px */
+  --mobile-spacing-md: 0.75rem;  /* 12px */
+  --mobile-spacing-lg: 1rem;     /* 16px */
+  
+  --mobile-text-xs: 0.625rem;    /* 10px */
+  --mobile-text-sm: 0.75rem;     /* 12px */
+  --mobile-text-base: 0.875rem;  /* 14px */
+  --mobile-text-lg: 1rem;        /* 16px */
+  
+  --mobile-icon-xs: 0.75rem;     /* 12px */
+  --mobile-icon-sm: 1rem;        /* 16px */
+  --mobile-icon-md: 1.25rem;     /* 20px */
+  
+  --mobile-avatar-xs: 1.5rem;    /* 24px */
+  --mobile-avatar-sm: 2rem;      /* 32px */
+  --mobile-avatar-md: 2.5rem;    /* 40px */
+  
+  --mobile-button-height: 2rem;  /* 32px */
+  --mobile-button-padding: 0.5rem 0.75rem; /* 8px 12px */
+  
+  --mobile-border-radius: 0.375rem; /* 6px */
+  --mobile-border-radius-lg: 0.5rem; /* 8px */
+}
+
+/* Mobile Backup Classes - Apply when screen < 340px */
+@media (max-width: 339px) {
+  /* Typography Backup */
+  .mobile-backup-text-xs { font-size: var(--mobile-text-xs) !important; }
+  .mobile-backup-text-sm { font-size: var(--mobile-text-sm) !important; }
+  .mobile-backup-text-base { font-size: var(--mobile-text-base) !important; }
+  .mobile-backup-text-lg { font-size: var(--mobile-text-lg) !important; }
+  
+  /* Spacing Backup */
+  .mobile-backup-p-xs { padding: var(--mobile-spacing-xs) !important; }
+  .mobile-backup-p-sm { padding: var(--mobile-spacing-sm) !important; }
+  .mobile-backup-p-md { padding: var(--mobile-spacing-md) !important; }
+  .mobile-backup-p-lg { padding: var(--mobile-spacing-lg) !important; }
+  
+  .mobile-backup-px-xs { padding-left: var(--mobile-spacing-xs) !important; padding-right: var(--mobile-spacing-xs) !important; }
+  .mobile-backup-px-sm { padding-left: var(--mobile-spacing-sm) !important; padding-right: var(--mobile-spacing-sm) !important; }
+  .mobile-backup-px-md { padding-left: var(--mobile-spacing-md) !important; padding-right: var(--mobile-spacing-md) !important; }
+  .mobile-backup-px-lg { padding-left: var(--mobile-spacing-lg) !important; padding-right: var(--mobile-spacing-lg) !important; }
+  
+  .mobile-backup-py-xs { padding-top: var(--mobile-spacing-xs) !important; padding-bottom: var(--mobile-spacing-xs) !important; }
+  .mobile-backup-py-sm { padding-top: var(--mobile-spacing-sm) !important; padding-bottom: var(--mobile-spacing-sm) !important; }
+  .mobile-backup-py-md { padding-top: var(--mobile-spacing-md) !important; padding-bottom: var(--mobile-spacing-md) !important; }
+  .mobile-backup-py-lg { padding-top: var(--mobile-spacing-lg) !important; padding-bottom: var(--mobile-spacing-lg) !important; }
+  
+  /* Gap Backup */
+  .mobile-backup-gap-xs { gap: var(--mobile-spacing-xs) !important; }
+  .mobile-backup-gap-sm { gap: var(--mobile-spacing-sm) !important; }
+  .mobile-backup-gap-md { gap: var(--mobile-spacing-md) !important; }
+  .mobile-backup-gap-lg { gap: var(--mobile-spacing-lg) !important; }
+  
+  /* Margin Backup */
+  .mobile-backup-m-xs { margin: var(--mobile-spacing-xs) !important; }
+  .mobile-backup-m-sm { margin: var(--mobile-spacing-sm) !important; }
+  .mobile-backup-m-md { margin: var(--mobile-spacing-md) !important; }
+  .mobile-backup-m-lg { margin: var(--mobile-spacing-lg) !important; }
+  
+  .mobile-backup-mb-xs { margin-bottom: var(--mobile-spacing-xs) !important; }
+  .mobile-backup-mb-sm { margin-bottom: var(--mobile-spacing-sm) !important; }
+  .mobile-backup-mb-md { margin-bottom: var(--mobile-spacing-md) !important; }
+  .mobile-backup-mb-lg { margin-bottom: var(--mobile-spacing-lg) !important; }
+  
+  /* Icon Sizing Backup */
+  .mobile-backup-icon-xs { width: var(--mobile-icon-xs) !important; height: var(--mobile-icon-xs) !important; }
+  .mobile-backup-icon-sm { width: var(--mobile-icon-sm) !important; height: var(--mobile-icon-sm) !important; }
+  .mobile-backup-icon-md { width: var(--mobile-icon-md) !important; height: var(--mobile-icon-md) !important; }
+  
+  /* Avatar Sizing Backup */
+  .mobile-backup-avatar-xs { width: var(--mobile-avatar-xs) !important; height: var(--mobile-avatar-xs) !important; }
+  .mobile-backup-avatar-sm { width: var(--mobile-avatar-sm) !important; height: var(--mobile-avatar-sm) !important; }
+  .mobile-backup-avatar-md { width: var(--mobile-avatar-md) !important; height: var(--mobile-avatar-md) !important; }
+  
+  /* Button Backup */
+  .mobile-backup-button {
+    height: var(--mobile-button-height) !important;
+    padding: var(--mobile-button-padding) !important;
+    font-size: var(--mobile-text-sm) !important;
+    border-radius: var(--mobile-border-radius) !important;
+  }
+  
+  /* Layout Backup */
+  .mobile-backup-stack { flex-direction: column !important; }
+  .mobile-backup-center { align-items: center !important; }
+  .mobile-backup-start { align-items: flex-start !important; }
+  .mobile-backup-justify-center { justify-content: center !important; }
+  .mobile-backup-justify-between { justify-content: space-between !important; }
+  
+  /* Width Backup */
+  .mobile-backup-w-full { width: 100% !important; }
+  .mobile-backup-w-auto { width: auto !important; }
+  .mobile-backup-w-fit { width: fit-content !important; }
+  
+  /* Height Backup */
+  .mobile-backup-h-auto { height: auto !important; }
+  .mobile-backup-h-fit { height: fit-content !important; }
+  
+  /* Border Radius Backup */
+  .mobile-backup-rounded { border-radius: var(--mobile-border-radius) !important; }
+  .mobile-backup-rounded-lg { border-radius: var(--mobile-border-radius-lg) !important; }
+  .mobile-backup-rounded-full { border-radius: 9999px !important; }
+  
+  /* Overflow Backup */
+  .mobile-backup-overflow-hidden { overflow: hidden !important; }
+  .mobile-backup-overflow-scroll { overflow: scroll !important; }
+  .mobile-backup-overflow-auto { overflow: auto !important; }
+  
+  /* Text Backup */
+  .mobile-backup-truncate { 
+    overflow: hidden !important; 
+    text-overflow: ellipsis !important; 
+    white-space: nowrap !important; 
+  }
+  .mobile-backup-break-words { 
+    word-break: break-word !important; 
+    overflow-wrap: break-word !important; 
+  }
+  
+  /* Display Backup */
+  .mobile-backup-hidden { display: none !important; }
+  .mobile-backup-block { display: block !important; }
+  .mobile-backup-flex { display: flex !important; }
+  .mobile-backup-inline-flex { display: inline-flex !important; }
+  
+  /* Position Backup */
+  .mobile-backup-relative { position: relative !important; }
+  .mobile-backup-absolute { position: absolute !important; }
+  .mobile-backup-fixed { position: fixed !important; }
+  
+  /* Z-Index Backup */
+  .mobile-backup-z-10 { z-index: 10 !important; }
+  .mobile-backup-z-20 { z-index: 20 !important; }
+  .mobile-backup-z-30 { z-index: 30 !important; }
+  .mobile-backup-z-40 { z-index: 40 !important; }
+  .mobile-backup-z-50 { z-index: 50 !important; }
+}
+
+/* Stitch AI Mobile Backup Component Classes */
+@media (max-width: 339px) {
+  /* Card Backup */
+  .mobile-backup-card {
+    padding: var(--mobile-spacing-sm) !important;
+    border-radius: var(--mobile-border-radius-lg) !important;
+    margin-bottom: var(--mobile-spacing-sm) !important;
+  }
+  
+  /* Header Backup */
+  .mobile-backup-header {
+    padding: var(--mobile-spacing-sm) !important;
+    font-size: var(--mobile-text-base) !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Button Group Backup */
+  .mobile-backup-button-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--mobile-spacing-xs) !important;
+    width: 100% !important;
+  }
+  
+  .mobile-backup-button-group .mobile-backup-button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  
+  /* Modal Backup */
+  .mobile-backup-modal {
+    max-height: 85vh !important;
+    border-radius: var(--mobile-border-radius-lg) var(--mobile-border-radius-lg) 0 0 !important;
+    padding: var(--mobile-spacing-sm) !important;
+  }
+  
+  .mobile-backup-modal-header {
+    padding: var(--mobile-spacing-sm) !important;
+    font-size: var(--mobile-text-base) !important;
+    margin-bottom: var(--mobile-spacing-sm) !important;
+  }
+  
+  .mobile-backup-modal-content {
+    padding: var(--mobile-spacing-sm) !important;
+    max-height: calc(85vh - 120px) !important;
+    overflow-y: auto !important;
+  }
+  
+  /* List Backup */
+  .mobile-backup-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--mobile-spacing-xs) !important;
+  }
+  
+  .mobile-backup-list-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: var(--mobile-spacing-xs) !important;
+    border-radius: var(--mobile-border-radius) !important;
+    min-height: 2.5rem !important;
+  }
+  
+  /* Form Backup */
+  .mobile-backup-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--mobile-spacing-sm) !important;
+  }
+  
+  .mobile-backup-form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--mobile-spacing-xs) !important;
+  }
+  
+  .mobile-backup-form-label {
+    font-size: var(--mobile-text-sm) !important;
+    font-weight: 500 !important;
+    margin-bottom: var(--mobile-spacing-xs) !important;
+  }
+  
+  .mobile-backup-form-input {
+    padding: var(--mobile-spacing-xs) var(--mobile-spacing-sm) !important;
+    font-size: var(--mobile-text-sm) !important;
+    border-radius: var(--mobile-border-radius) !important;
+    height: 2.25rem !important;
+  }
+  
+  /* Badge Backup */
+  .mobile-backup-badge {
+    padding: 0.125rem 0.375rem !important;
+    font-size: var(--mobile-text-xs) !important;
+    border-radius: var(--mobile-border-radius) !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Avatar Backup */
+  .mobile-backup-avatar {
+    width: var(--mobile-avatar-sm) !important;
+    height: var(--mobile-avatar-sm) !important;
+    font-size: var(--mobile-text-sm) !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Icon Backup */
+  .mobile-backup-icon {
+    width: var(--mobile-icon-sm) !important;
+    height: var(--mobile-icon-sm) !important;
+  }
+  
+  /* Spacing Utilities */
+  .mobile-backup-space-y-xs > * + * { margin-top: var(--mobile-spacing-xs) !important; }
+  .mobile-backup-space-y-sm > * + * { margin-top: var(--mobile-spacing-sm) !important; }
+  .mobile-backup-space-y-md > * + * { margin-top: var(--mobile-spacing-md) !important; }
+  .mobile-backup-space-y-lg > * + * { margin-top: var(--mobile-spacing-lg) !important; }
+  
+  .mobile-backup-space-x-xs > * + * { margin-left: var(--mobile-spacing-xs) !important; }
+  .mobile-backup-space-x-sm > * + * { margin-left: var(--mobile-spacing-sm) !important; }
+  .mobile-backup-space-x-md > * + * { margin-left: var(--mobile-spacing-md) !important; }
+  .mobile-backup-space-x-lg > * + * { margin-left: var(--mobile-spacing-lg) !important; }
+}
+
+/* Stitch AI Color Backup - Maintain brand consistency */
+@media (max-width: 339px) {
+  .mobile-backup-primary { color: #1773cf !important; }
+  .mobile-backup-primary-bg { background-color: #1773cf !important; }
+  .mobile-backup-primary-bg-10 { background-color: rgba(23, 115, 207, 0.1) !important; }
+  .mobile-backup-primary-bg-20 { background-color: rgba(23, 115, 207, 0.2) !important; }
+  
+  .mobile-backup-text-primary { color: #0d1117 !important; }
+  .mobile-backup-text-secondary { color: #57606a !important; }
+  .mobile-backup-text-muted { color: #8b949e !important; }
+  
+  .mobile-backup-bg-primary { background-color: #f0f2f5 !important; }
+  .mobile-backup-bg-secondary { background-color: #ffffff !important; }
+  .mobile-backup-bg-muted { background-color: #f6f8fa !important; }
+  
+  .mobile-backup-border { border-color: #d0d7de !important; }
+  .mobile-backup-border-light { border-color: #e1e4e8 !important; }
+  .mobile-backup-border-dark { border-color: #30363d !important; }
+}
+
+/* Dark Mode Mobile Backup */
+@media (max-width: 339px) {
+  .dark .mobile-backup-text-primary { color: #c9d1d9 !important; }
+  .dark .mobile-backup-text-secondary { color: #8b949e !important; }
+  .dark .mobile-backup-text-muted { color: #6e7681 !important; }
+  
+  .dark .mobile-backup-bg-primary { background-color: #0d1117 !important; }
+  .dark .mobile-backup-bg-secondary { background-color: #161b22 !important; }
+  .dark .mobile-backup-bg-muted { background-color: #21262d !important; }
+  
+  .dark .mobile-backup-border { border-color: #30363d !important; }
+  .dark .mobile-backup-border-light { border-color: #21262d !important; }
+  .dark .mobile-backup-border-dark { border-color: #484f58 !important; }
+}

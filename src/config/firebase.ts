@@ -1,7 +1,7 @@
 // Firebase configuration
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
@@ -20,7 +20,29 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+declare global {
+  interface Window { __FIRESTORE_INITIALIZED__?: boolean }
+}
+
+export const db = (() => {
+  if (typeof window !== 'undefined') {
+    if (!window.__FIRESTORE_INITIALIZED__) {
+      const instance = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        // experimentalForceLongPolling: true,
+      });
+      window.__FIRESTORE_INITIALIZED__ = true;
+      return instance;
+    }
+    return getFirestore(app);
+  }
+  // SSR or non-window environment fallback
+  try {
+    return initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+  } catch {
+    return getFirestore(app);
+  }
+})();
 export const storage = getStorage(app);
 export const analytics = getAnalytics(app);
 

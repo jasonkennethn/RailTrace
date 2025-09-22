@@ -8,6 +8,14 @@ export interface User {
   lastLogin?: Date;
   organizationId?: string;
   organizationName?: string;
+  approvedAt?: Date;
+  rejectedAt?: Date;
+  phone?: string;
+  location?: string;
+  department?: string;
+  experience?: string;
+  qualifications?: string;
+  reason?: string;
 }
 
 export interface RailwayFitting {

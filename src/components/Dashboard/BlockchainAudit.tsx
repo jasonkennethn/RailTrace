@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Shield, 
   CheckCircle, 
   XCircle, 
-  Clock, 
   Download,
-  Hash,
   Package,
   RefreshCw,
   ExternalLink,
-  ChevronDown,
-  ChevronUp
+  Search
 } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '../ui/Card';
+// import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { CopyButton } from '../ui/CopyButton';
-import { TruncatedText } from '../ui/TruncatedText';
-import { StatsCard } from './StatsCard';
-import { Skeleton } from '../ui/Skeleton';
+// import { TruncatedText } from '../ui/TruncatedText';
+// import { StatsCard } from './StatsCard';
+// import { Skeleton } from '../ui/Skeleton';
+import { SmartAddressDisplay } from '../ui/SmartAddressDisplay';
+import { ScrollableHeader } from '../ui/ScrollableHeader';
 import { blockchainService } from '../../services/blockchainService';
 import { ethers } from 'ethers';
 import { collection, query, where, getDocs, orderBy, doc, setDoc, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface BlockchainRecord {
   id: string;
@@ -47,7 +47,14 @@ interface AuditSummary {
   lastBlockMined?: Date;
 }
 
-export function BlockchainAudit() {
+interface BlockchainAuditProps {
+  onBack?: () => void;
+  onViewTransaction?: (transactionId: string) => void;
+  onViewPart?: (partData: any) => void;
+}
+
+export function BlockchainAudit({ onBack, onViewTransaction, onViewPart }: BlockchainAuditProps) {
+  const { t } = useLanguage();
   const [records, setRecords] = useState<BlockchainRecord[]>([]);
   const [summary, setSummary] = useState<AuditSummary>({
     totalTransactions: 0,
@@ -58,10 +65,11 @@ export function BlockchainAudit() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isTxEnriching, setIsTxEnriching] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all'|'confirmed'|'pending'|'failed'>('all');
+  // const [statusFilter, setStatusFilter] = useState<'all'|'confirmed'|'pending'|'failed'>('all');
   const [recentRecords, setRecentRecords] = useState<BlockchainRecord[]>([]);
   const [partHashInput, setPartHashInput] = useState('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [expandedExtraData, setExpandedExtraData] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Clear any previous state on refresh
@@ -81,10 +89,10 @@ export function BlockchainAudit() {
     const q = query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items: BlockchainRecord[] = [];
-      snapshot.forEach((d, idx) => {
-        const v = d.data() as any;
+      snapshot.forEach((doc) => {
+        const v = doc.data() as any;
         items.push({
-          id: `recent-${v.partHash || 'unknown'}-${v.eventType || 'manufacture'}-${idx}-${Date.now()}`,
+          id: `recent-${v.partHash || 'unknown'}-${v.eventType || 'manufacture'}-${doc.id}`,
           transactionHash: v.transactionHash || '',
           fittingId: v.partHash || 'unknown',
           eventType: (v.eventType || 'manufacture') as BlockchainRecord['eventType'],
@@ -177,43 +185,43 @@ export function BlockchainAudit() {
     return out;
   };
 
-  const deepBackfillMissingTx = async (partHash: string, expected: Partial<Record<'registered'|'received'|'installed'|'inspected'|'retired', number>>) => {
-    setIsTxEnriching(true);
-    try {
-      const txMap = await loadTxHashesForPart(partHash, expected, { windowSize: 2000, maxWindows: 40 }); // ~80k blocks
-      const q = {
-        manufacture: (txMap['registered'] || []).slice(),
-        receive: (txMap['received'] || []).slice(),
-        install: (txMap['installed'] || []).slice(),
-        inspect: (txMap['inspected'] || []).slice(),
-        retire: (txMap['retired'] || []).slice(),
-      } as Record<BlockchainRecord['eventType'], string[]>;
-      setRecords(prev => prev.map(r => ({ ...r, transactionHash: r.transactionHash || q[r.eventType]?.shift() || '' })));
-    } finally {
-      setIsTxEnriching(false);
-    }
-  };
+  // const deepBackfillMissingTx = async (partHash: string, expected: Partial<Record<'registered'|'received'|'installed'|'inspected'|'retired', number>>) => {
+  //   setIsTxEnriching(true);
+  //   try {
+  //     const txMap = await loadTxHashesForPart(partHash, expected, { windowSize: 2000, maxWindows: 40 });
+  //     const q = {
+  //       manufacture: (txMap['registered'] || []).slice(),
+  //       receive: (txMap['received'] || []).slice(),
+  //       install: (txMap['installed'] || []).slice(),
+  //       inspect: (txMap['inspected'] || []).slice(),
+  //       retire: (txMap['retired'] || []).slice(),
+  //     } as Record<BlockchainRecord['eventType'], string[]>;
+  //     setRecords(prev => prev.map(r => ({ ...r, transactionHash: r.transactionHash || q[r.eventType]?.shift() || '' })));
+  //   } finally {
+  //     setIsTxEnriching(false);
+  //   }
+  // };
 
-  const applyStatusFilter = (items: BlockchainRecord[]) => {
-    if (statusFilter === 'all') return items;
-    return items.filter(i => i.verificationStatus === statusFilter);
-  };
+  // const applyStatusFilter = (items: BlockchainRecord[]) => {
+  //   if (statusFilter === 'all') return items;
+  //   return items.filter(i => i.verificationStatus === statusFilter);
+  // };
 
-  const mergeWithFirestore = async (partHash: string, items: BlockchainRecord[]) => {
-    try {
-      const q = query(collection(db, 'transactions'), where('partHash', '==', partHash));
-      const snap = await getDocs(q);
-      const byEvent = new Map<string, string>(); // eventType->txHash (first match)
-      snap.forEach(d => {
-        const val = d.data();
-        if (val?.eventType && val?.transactionHash && !byEvent.has(val.eventType)) byEvent.set(val.eventType, val.transactionHash);
-      });
-      return items.map(i => ({
-        ...i,
-        transactionHash: i.transactionHash || byEvent.get(i.eventType) || ''
-      }));
-    } catch { return items; }
-  };
+  // const mergeWithFirestore = async (partHash: string, items: BlockchainRecord[]) => {
+  //   try {
+  //     const q = query(collection(db, 'transactions'), where('partHash', '==', partHash));
+  //     const snap = await getDocs(q);
+  //     const byEvent = new Map<string, string>();
+  //     snap.forEach(doc => {
+  //       const val = doc.data();
+  //       if (val?.eventType && val?.transactionHash && !byEvent.has(val.eventType)) byEvent.set(val.eventType, val.transactionHash);
+  //     });
+  //     return items.map(i => ({
+  //       ...i,
+  //       transactionHash: i.transactionHash || byEvent.get(i.eventType) || ''
+  //     }));
+  //   } catch { return items; }
+  // };
 
   const backfillFirestore = async (partHash: string, items: BlockchainRecord[]) => {
     try {
@@ -221,8 +229,8 @@ export function BlockchainAudit() {
       const q = query(collection(db, 'transactions'), where('partHash', '==', partHash));
       const snap = await getDocs(q);
       const existing = new Set<string>();
-      snap.forEach(d => { 
-        const v = d.data(); 
+      snap.forEach(doc => { 
+        const v = doc.data(); 
         if (v?.transactionHash) existing.add(v.transactionHash);
         // Also check by eventType + partHash combination to avoid duplicate events
         if (v?.eventType && v?.partHash) existing.add(`${v.partHash}-${v.eventType}`);
@@ -256,25 +264,55 @@ export function BlockchainAudit() {
   };
 
   const loadFromChainByPartHash = async (partHash: string) => {
-    if (!partHash || !partHash.startsWith('0x') || partHash.length !== 66) return;
+    // Trim whitespace first
+    const trimmedHash = partHash?.trim() || '';
+    
+    if (!trimmedHash) {
+      console.log('No part hash provided');
+      return;
+    }
+    
+    // Normalize the part hash - add 0x prefix if missing
+    let normalizedHash = trimmedHash;
+    if (!normalizedHash.startsWith('0x')) {
+      normalizedHash = `0x${normalizedHash}`;
+    }
+    
+    // Validate the hash format (should be 66 characters including 0x prefix)
+    if (normalizedHash.length !== 66) {
+      console.error('Invalid part hash length:', normalizedHash.length, 'Hash:', normalizedHash);
+      alert(`Invalid part hash format. Expected 66 characters (0x + 64 hex), got ${normalizedHash.length} characters. Please enter a valid 64-character hash.`);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Validate hex characters only
+    if (!/^0x[0-9a-fA-F]{64}$/.test(normalizedHash)) {
+      console.error('Invalid part hash format:', normalizedHash);
+      alert('Invalid part hash format. Please enter a valid hexadecimal hash.');
+      setIsLoading(false);
+      return;
+    }
+    
+    console.log('Loading from chain for part hash:', normalizedHash);
     setIsLoading(true);
     setRecords([]); // Clear previous records
     
     try {
       // First, check if we already have this data in Firestore
-      console.log('Checking Firestore for existing data for partHash:', partHash);
-      const existingQuery = query(collection(db, 'transactions'), where('partHash', '==', partHash));
+      console.log('Checking Firestore for existing data for partHash:', normalizedHash);
+      const existingQuery = query(collection(db, 'transactions'), where('partHash', '==', normalizedHash));
       const existingSnap = await getDocs(existingQuery);
       
       if (!existingSnap.empty) {
         console.log('Found existing data in Firestore, loading from cache');
         const cachedRecords: BlockchainRecord[] = [];
-        existingSnap.forEach((d, idx) => {
-          const v = d.data() as any;
+        existingSnap.forEach((doc) => {
+          const v = doc.data() as any;
           cachedRecords.push({
-            id: `cached-${partHash}-${v.eventType}-${idx}-${Date.now()}`,
+            id: `cached-${normalizedHash}-${v.eventType}-${doc.id}`,
             transactionHash: v.transactionHash || '',
-            fittingId: partHash,
+            fittingId: normalizedHash,
             eventType: mapEventType(v.eventType),
             timestamp: v.createdAt?.toDate ? v.createdAt.toDate() : (v.timestamp?.toDate ? v.timestamp.toDate() : new Date()),
             data: v.metadata || {},
@@ -300,12 +338,14 @@ export function BlockchainAudit() {
       }
 
       // If no cached data, fetch from blockchain
-      console.log('No cached data found, fetching from blockchain for partHash:', partHash);
-      const history = await blockchainService.getPartHistory(partHash);
+      console.log('No cached data found, fetching from blockchain for partHash:', normalizedHash);
+      const history = await blockchainService.getPartHistory(normalizedHash);
       console.log('Raw history from blockchain:', history);
       
       if (history.length === 0) {
         console.log('No blockchain history found for this partHash');
+        // Show a message to the user
+        alert('No blockchain history found for this part hash. Please verify the hash is correct.');
         setRecords([]);
         setSummary({
           totalTransactions: 0,
@@ -383,6 +423,16 @@ export function BlockchainAudit() {
       
     } catch (error) {
       console.error('Failed to load on-chain history:', error);
+      // Show user-friendly error message
+      alert('Failed to load blockchain data. Please check your connection and try again.');
+      setRecords([]);
+      setSummary({
+        totalTransactions: 0,
+        confirmedTransactions: 0,
+        pendingTransactions: 0,
+        failedTransactions: 0,
+        totalGasUsed: 0
+      });
       setIsLoading(false);
       setIsTxEnriching(false);
     }
@@ -397,10 +447,10 @@ export function BlockchainAudit() {
       const q = query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(50));
       const snap = await getDocs(q);
       const items: BlockchainRecord[] = [];
-      snap.forEach((d, idx) => {
-        const v = d.data() as any;
+      snap.forEach((doc) => {
+        const v = doc.data() as any;
         items.push({
-          id: `recent-${v.partHash || 'unknown'}-${v.eventType || 'manufacture'}-${idx}-${Date.now()}`,
+          id: `recent-${v.partHash || 'unknown'}-${v.eventType || 'manufacture'}-${doc.id}`,
           transactionHash: v.transactionHash || '',
           fittingId: v.partHash || 'unknown',
           eventType: (v.eventType || 'manufacture') as BlockchainRecord['eventType'],
@@ -455,30 +505,27 @@ export function BlockchainAudit() {
     }
   };
 
-  const exportAuditReport = () => {
-    const csvContent = [
-      ['Transaction Hash', 'Part Hash', 'Event Type', 'Status', 'Timestamp', 'Block Number', 'Gas Used'],
-      ...records.map(record => [
-        record.transactionHash,
-        record.fittingId,
-        record.eventType,
-        record.verificationStatus,
-        record.timestamp.toISOString(),
-        record.blockNumber?.toString() || '',
-        record.gasUsed?.toString() || ''
-      ])
-    ].map(row => row.join(',')).join('\n');
+  // const exportAuditReport = () => { /* kept for future use */ };
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `blockchain-audit-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const getBscScanBaseUrl = () => {
+    const envBase = (import.meta as { env?: { VITE_BSCSCAN_BASE_URL?: string } }).env?.VITE_BSCSCAN_BASE_URL;
+    // Defaults to testnet; set VITE_BSCSCAN_BASE_URL=https://bscscan.com for mainnet
+    return envBase || 'https://testnet.bscscan.com';
   };
 
-  const bscscanTx = (tx: string) => tx ? `https://testnet.bscscan.com/tx/${tx}` : '';
+  const normalizeTxHash = (hash: string | undefined | null): string => {
+    if (!hash) return '';
+    let h = hash.trim();
+    if (!h) return '';
+    if (!h.startsWith('0x')) h = `0x${h}`;
+    if (!/^0x[0-9a-fA-F]{64}$/.test(h)) return '';
+    return h;
+  };
+
+  const bscscanTx = (tx: string) => {
+    const norm = normalizeTxHash(tx);
+    return norm ? `${getBscScanBaseUrl()}/tx/${norm}` : '';
+  };
 
   const toggleCardExpansion = (cardId: string) => {
     setExpandedCards(prev => {
@@ -493,6 +540,10 @@ export function BlockchainAudit() {
   };
 
   const isCardExpanded = (cardId: string) => expandedCards.has(cardId);
+
+  const handleRefresh = () => {
+    loadRecentTransactions();
+  };
 
   const formatDataKey = (key: string): string => {
     const keyMap: { [key: string]: string } = {
@@ -532,6 +583,17 @@ export function BlockchainAudit() {
       if (value === 2) return '2';
       return value.toString();
     }
+    if (typeof value === 'object' && value !== null) {
+      // Handle GPS coordinates object
+      if ('latitude' in value && 'longitude' in value) {
+        const lat = typeof value.latitude === 'number' ? value.latitude : parseFloat(String(value.latitude));
+        const lng = typeof value.longitude === 'number' ? value.longitude : parseFloat(String(value.longitude));
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+      }
+      return JSON.stringify(value, null, 2);
+    }
     if (typeof value === 'string') {
       // Format dates
       if (value.includes('T') && value.includes('Z')) {
@@ -541,348 +603,386 @@ export function BlockchainAudit() {
           return value;
         }
       }
-      // Format GPS coordinates
-      if (value.includes('latitude') || value.includes('longitude')) {
-        return value;
-      }
       return value;
     }
     return String(value);
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Blockchain Audit Trail</h2>
-        <p className="text-gray-600 mt-1">Lifecycle by partHash with on-chain verification</p>
+    <div className="flex flex-col h-screen justify-between">
+      <main className="flex-grow overflow-y-auto">
+        {/* Header with Hide-on-Scroll */}
+        <ScrollableHeader>
+          <div className="flex items-center p-3 sm:p-4">
+            <button 
+              onClick={onBack}
+              className="touch-target p-2 -ml-2 active:scale-95 transition-transform"
+            >
+              <span className="material-symbols-outlined text-[#0d1117] dark:text-[#c9d1d9]">arrow_back</span>
+            </button>
+            <h1 className="text-base sm:text-lg font-bold text-[#0d1117] dark:text-[#c9d1d9] flex-1 text-center pr-10">{t('blockchain.title')}</h1>
       </div>
+        </ScrollableHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard title="Total Transactions" value={summary.totalTransactions} subtitle="All blockchain records" icon={<Hash className="h-6 w-6" />} />
-        <StatsCard title="Confirmed" value={summary.confirmedTransactions} subtitle="Verified transactions" icon={<CheckCircle className="h-6 w-6" />} />
-        <StatsCard title="Pending" value={summary.pendingTransactions} subtitle="Awaiting confirmation" icon={<Clock className="h-6 w-6" />} />
-        <StatsCard title="Failed" value={summary.failedTransactions} subtitle="Require attention" icon={<XCircle className="h-6 w-6" />} />
-      </div>
-
-      {/* Block Information */}
-      {summary.lastBlockMined && (
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Blockchain Information</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                <Package className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-sm font-medium text-blue-900">Latest Block</p>
-                  <p className="text-lg font-bold text-blue-800">
-                    #{summary.lastBlockMined ? new Date(summary.lastBlockMined).toLocaleString() : 'N/A'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
-                <Shield className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-green-900">Total Gas Used</p>
-                  <p className="text-lg font-bold text-green-800">
-                    {summary.totalGasUsed.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
-                <Hash className="h-5 w-5 text-purple-600" />
-                <div>
-                  <p className="text-sm font-medium text-purple-900">Success Rate</p>
-                  <p className="text-lg font-bold text-purple-800">
-                    {summary.totalTransactions > 0 
-                      ? Math.round((summary.confirmedTransactions / summary.totalTransactions) * 100)
-                      : 0}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Part Lookup & Blockchain Verification</h3>
-            <p className="text-sm text-gray-600">Search by part hash</p>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              {/* Search Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Part Hash</label>
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+          {/* Part Hash Verification Section */}
+          <section>
+            <h2 className="text-base sm:text-lg font-bold text-[#0d1117] dark:text-[#c9d1d9] mb-2">Part Hash Verification</h2>
+            <div className="bg-[#ffffff] dark:bg-[#161b22] rounded-xl shadow-sm hover:shadow-lg transition-shadow border border-[#d0d7de] dark:border-[#30363d]">
+              <div className="p-3 sm:p-4">
+              <div className="relative">
+                  <Search className="absolute left-3 top-[51%] transform -translate-y-1/2 h-4 w-4 text-[#57606a] dark:text-[#8b949e] pointer-events-none" />
                 <input
+                    className="w-full bg-[#f0f2f5] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-[#1773cf] h-12 text-sm text-[#0d1117] dark:text-[#c9d1d9] touch-target" 
+                    placeholder="Enter 64-character hex hash (without 0x prefix)" 
                   type="text"
-                  placeholder="0x32d66592a1469a72e5c5531d4a14360925665d57d64dea016f8993ecd86edb46"
-                  value={partHashInput}
-                  onChange={(e) => setPartHashInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') loadFromChainByPartHash(partHashInput); }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  autoComplete="off"
+                    value={partHashInput}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      
+                      // Remove 0x prefix if user pastes it, we'll add it back later
+                      if (value.toLowerCase().startsWith('0x')) {
+                        value = value.substring(2);
+                      }
+                      
+                      // Only allow hex characters and remove any spaces
+                      value = value.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+                      
+                      // Limit to 64 characters max
+                      if (value.length > 64) {
+                        value = value.substring(0, 64);
+                      }
+                      
+                      setPartHashInput(value);
+                    }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') loadFromChainByPartHash(partHashInput); }}
                 />
+                <div className="mt-2 text-xs text-[#57606a] dark:text-[#8b949e]">
+                  {partHashInput ? (
+                    <>
+                      {partHashInput.length}/64 characters
+                      {partHashInput.length === 64 && (
+                        <span className="ml-2 text-green-600 dark:text-green-400">✓ Valid length</span>
+                      )}
+                    </>
+                  ) : null}
+                </div>
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
-                <Button 
-                  variant="outline" 
-                  onClick={() => loadFromChainByPartHash(partHashInput)} 
-                  leftIcon={<RefreshCw className="h-4 w-4" />}
-                  disabled={!partHashInput}
-                  className="w-full sm:w-auto transition-all duration-200 hover:shadow-md active:scale-[0.99]"
-                >
-                  <span className="hidden sm:inline">Load from Blockchain</span>
-                  <span className="sm:hidden">Load Blockchain</span>
-                </Button>
-                
-                <select
-                  value={statusFilter} 
-                  onChange={(e) => setStatusFilter(e.target.value as any)} 
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-full sm:w-auto"
-                >
-                  <option value="all">All Status</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="pending">Pending</option>
-                  <option value="failed">Failed</option>
-                </select>
-                
-                <Button
-                  variant="outline"
-                  onClick={exportAuditReport}
-                  leftIcon={<Download className="h-4 w-4" />}
-                  className="w-full sm:w-auto transition-all duration-200 hover:shadow-md active:scale-[0.99]"
-                >
-                  <span className="hidden sm:inline">Export CSV</span>
-                  <span className="sm:hidden">Export</span>
-                </Button>
-                
-                {isTxEnriching && <span className="text-xs text-gray-500 text-center sm:text-left">Fetching tx hashes…</span>}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              {records.length > 0 ? 'Blockchain Records' : 'Recent Transactions'}
-            </h3>
-            <div className="flex items-center gap-2">
-              <Badge variant="info">
-                {records.length > 0 ? `${records.length} blockchain` : `${recentRecords.length} recent`}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadRecentTransactions} 
-                leftIcon={<RefreshCw className="h-4 w-4" />}
-              >
-                {records.length > 0 ? 'Show All Recent' : 'Refresh'}
-              </Button>
+                <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                  <button 
+                    className="w-full bg-[#1773cf] text-white font-bold py-3 px-4 rounded-xl text-sm h-12 flex items-center justify-center gap-2 hover:bg-[#1773cf]/90 touch-target active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => loadFromChainByPartHash(partHashInput)}
+                    disabled={!partHashInput || isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-base">verified</span>
+                        Verify
+                      </>
+                    )}
+                  </button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                </div>
-              ))}
             </div>
-          ) : (records.length > 0 ? records : recentRecords).length > 0 ? (
-            <div className="space-y-4">
-              {(records.length > 0 ? records : recentRecords).map((record, index) => {
-                const cardId = `${records.length > 0 ? 'blockchain' : 'recent'}-${record.id}-${index}`;
-                const isExpanded = isCardExpanded(cardId);
-                
-                return (
-                  <div key={cardId} className="border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    {/* Header Section - Always Visible */}
-                    <div className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
-                    <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        {getEventTypeIcon(record.eventType)}
+          </section>
+
+          {/* Results Section */}
+          {records.length > 0 && (
+            <section>
+              <h2 className="text-base sm:text-lg font-bold text-[#0d1117] dark:text-[#c9d1d9] mb-2">Results</h2>
+              <div className="space-y-3">
+                {records.slice(0, 4).map((record, index) => {
+                  const resId = `${record.id}-result-${index}`;
+                  const isExpanded = isCardExpanded(resId);
+                  return (
+                    <div key={`result-${record.id}-${index}`} className="bg-[#ffffff] dark:bg-[#161b22] rounded-xl border border-[#d0d7de] dark:border-[#30363d] overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleCardExpansion(resId)}
+                        className="w-full p-3 sm:p-4 flex items-center justify-between gap-3 hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1773cf]/10 text-[#1773cf] flex-shrink-0">
+                            <span className="material-symbols-outlined">qr_code_2</span>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-medium text-gray-900 truncate">{record.fittingId}</h4>
-                            <p className="text-sm text-gray-600 capitalize">{record.eventType}</p>
+                          <div className="min-w-0">
+                            <p className="text-xs text-[#57606a] dark:text-[#8b949e] font-medium">Part ID</p>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <SmartAddressDisplay address={record.fittingId} variant="minimal" maxLength={4} className="text-sm" />
+                              <CopyButton value={record.fittingId} />
+                            </div>
                           </div>
                         </div>
-                        <div className="text-left sm:text-right">
-                          {getStatusBadge(record.verificationStatus)}
-                          <p className="text-xs text-gray-500 mt-1">{record.timestamp.toLocaleString()}</p>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-xs text-[#57606a] dark:text-[#8b949e] font-medium">Date</p>
+                            <p className="text-sm text-[#0d1117] dark:text-[#c9d1d9]">{isNaN(record.timestamp.getTime()) ? 'Invalid Date' : record.timestamp.toLocaleDateString()}</p>
+                          </div>
+                          <div className={`inline-flex items-center gap-1.5 rounded-full ${record.verificationStatus === 'confirmed' ? 'bg-green-500/20 text-green-700 dark:text-green-400' : record.verificationStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400' : 'bg-red-500/20 text-red-700 dark:text-red-400'} px-2.5 py-1 text-xs font-medium`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${record.verificationStatus === 'confirmed' ? 'bg-green-500' : record.verificationStatus === 'pending' ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
+                            {record.verificationStatus.charAt(0).toUpperCase() + record.verificationStatus.slice(1)}
+                          </div>
+                        </div>
+                      </button>
+                      {/* Collapsible content */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 space-y-3 border-t border-border-light dark:border-border-dark">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-sm font-medium text-subtle-light dark:text-subtle-dark">Transaction Hash</span>
+                            {record.transactionHash ? (
+                              <div className="flex items-center gap-2 min-w-0">
+                                <SmartAddressDisplay address={record.transactionHash} variant="compact" maxLength={4} className="text-sm" />
+                                <CopyButton value={record.transactionHash} />
+                              </div>
+                            ) : (
+                              <span className="text-sm text-subtle-light dark:text-subtle-dark">N/A</span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-sm font-medium text-subtle-light dark:text-subtle-dark">Block Number</span>
+                            <span className="text-sm text-foreground-light dark:text-foreground-dark">{record.blockNumber?.toString() || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-sm font-medium text-subtle-light dark:text-subtle-dark">Event Type</span>
+                            <Badge variant="default" size="sm" className="capitalize">{record.eventType}</Badge>
+                          </div>
+                        </div>
+                      )}
+          </div>
+                  );
+                })}
+            </div>
+            </section>
+          )}
+
+          {/* Event History Section */}
+          {records.length > 0 && (
+            <section>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Event History</h2>
+              <div className="relative pl-5">
+                <div className="absolute left-7 top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-700"></div>
+                <div className="space-y-8">
+                  {records.map((record, index) => (
+                    <div key={`timeline-${record.id}-${index}`} className="relative">
+                      <div className="absolute -left-2.5 top-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary/20 dark:bg-primary/30">
+                        <span className="material-symbols-outlined text-primary">
+                          {record.eventType === 'manufacture' ? 'app_registration' :
+                           record.eventType === 'inspect' ? 'fact_check' :
+                           record.eventType === 'install' ? 'build_circle' :
+                           record.eventType === 'receive' ? 'inventory' :
+                           'construction'}
+                        </span>
+                      </div>
+                      <div className="ml-12 pt-1.5">
+                        <p className="font-semibold text-gray-900 dark:text-white capitalize">
+                          Part {record.eventType === 'manufacture' ? 'Registered' :
+                                record.eventType === 'inspect' ? 'Inspected' :
+                                record.eventType === 'install' ? 'Installed' :
+                                record.eventType === 'receive' ? 'Received' :
+                                'Retired'}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {record.timestamp.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                    </div>
+                  </div>
+            </section>
+          )}
+
+          {/* Recent Transactions Section */}
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-foreground-light dark:text-foreground-dark">{t('blockchain.recentTransactions')}</h2>
+              <button 
+                onClick={handleRefresh}
+                className="p-2 text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors rounded-lg hover:bg-background-light dark:hover:bg-background-dark"
+                title="Refresh transactions"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {recentRecords.slice(0, 5).map((record) => {
+                const isExpanded = isCardExpanded(record.id);
+                return (
+                  <div key={record.id} className="bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark overflow-hidden">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                      onClick={() => onViewPart ? onViewPart(record) : toggleCardExpansion(record.id)}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary flex-shrink-0">
+                          {getEventTypeIcon(record.eventType)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-foreground-light dark:text-foreground-dark text-sm">
+                              {record.eventType === 'manufacture' ? 'Part Manufactured' :
+                               record.eventType === 'inspect' ? 'Part Inspected' :
+                               record.eventType === 'install' ? 'Part Installed' :
+                               record.eventType === 'receive' ? 'Part Received' :
+                               'Part Retired'}
+                            </h3>
+                            {getStatusBadge(record.verificationStatus)}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-subtle-light dark:text-subtle-dark">
+                            <span>Part:</span>
+                            <SmartAddressDisplay
+                              address={record.fittingId}
+                              variant="minimal"
+                              maxLength={4}
+                              className="text-xs font-mono"
+                            />
+                            <span>•</span>
+                            <span>{record.timestamp.toLocaleDateString()}</span>
+                          </div>
                         </div>
                       </div>
-
-                      {/* Compact Info Row - Always Visible */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Hash className="h-4 w-4 text-gray-500" />
-                          <span className="text-xs text-gray-600">Part Hash:</span>
-                          <TruncatedText text={record.fittingId} className="text-xs text-gray-800" />
-                          <CopyButton value={record.fittingId} size="sm" />
-                        </div>
-                        
-                        {record.transactionHash && (
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Shield className="h-4 w-4 text-gray-500" />
-                            <span className="text-xs text-gray-600">Tx Hash:</span>
-                            <a className="text-blue-600 hover:text-blue-800 font-mono text-xs truncate" href={bscscanTx(record.transactionHash)} target="_blank" rel="noreferrer" title={record.transactionHash}>
-                              <TruncatedText text={record.transactionHash} className="text-xs" />
-                            </a>
-                            <CopyButton value={record.transactionHash} size="sm" />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`material-symbols-outlined text-subtle-light dark:text-subtle-dark transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                          chevron_right
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Expanded Details */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 border-t border-border-light dark:border-border-dark">
+                        <div className="pt-4 space-y-4">
+                          {/* Transaction Hash */}
+                          <div className="space-y-2">
+                            <span className="text-sm font-medium text-subtle-light dark:text-subtle-dark">Transaction Hash:</span>
+                            {record.transactionHash ? (
+                              <div className="flex items-center gap-2 min-w-0">
+                                <SmartAddressDisplay address={record.transactionHash} variant="compact" maxLength={4} className="w-full" />
+                                <CopyButton value={record.transactionHash} />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const url = bscscanTx(record.transactionHash);
+                                    if (url) window.open(url, '_blank');
+                                  }}
+                                  className="shrink-0"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-subtle-light dark:text-subtle-dark">N/A</span>
+                            )}
                           </div>
-                        )}
-                        
-                        {record.blockNumber && (
-                          <div className="flex items-center space-x-2">
-                            <Package className="h-4 w-4 text-gray-500" />
-                            <span className="text-xs text-gray-600">Block:</span>
-                            <span className="font-mono text-xs font-semibold text-green-800">
-                              #{record.blockNumber.toLocaleString()}
+                          
+                          {/* Block Number */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-subtle-light dark:text-subtle-dark">Block Number:</span>
+                            <span className="text-sm text-foreground-light dark:text-foreground-dark">
+                              {record.blockNumber ? `#${record.blockNumber}` : 'N/A'}
                             </span>
                           </div>
-                        )}
-                      </div>
-
-                      {/* Expand/Collapse Button */}
-                      <div className="flex justify-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleCardExpansion(cardId)}
-                          leftIcon={isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          className="text-xs"
-                        >
-                          {isExpanded ? 'Hide Details' : 'Show Details'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Expandable Details Section */}
-                    {isExpanded && (
-                      <div className="border-t border-gray-200 p-4 bg-gray-50">
-                        {/* Enhanced Transaction Details */}
-                        <div className="space-y-4">
-                          {/* Primary Info Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Hash className="h-4 w-4 text-gray-500" />
-                                <span className="text-sm font-medium text-gray-700">Part Hash</span>
+                          
+                          {/* Event Type */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-subtle-light dark:text-subtle-dark">Event Type:</span>
+                            <Badge variant="default" size="sm" className="capitalize">
+                              {record.eventType}
+                            </Badge>
+                          </div>
+                          
+                          {/* Part Hash */}
+                          <div className="flex items-center justify-between min-w-0">
+                            <span className="text-sm font-medium text-subtle-light dark:text-subtle-dark">Part Hash:</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <SmartAddressDisplay address={record.fittingId} variant="compact" maxLength={4} className="font-mono text-sm text-foreground-light dark:text-foreground-dark" />
+                              <CopyButton value={record.fittingId} />
+                            </div>
+                          </div>
+                          
+                          {/* Additional Data (collapsible) */}
+                          {Object.keys(record.data).length > 0 && (
+                      <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-subtle-light dark:text-subtle-dark">Additional Data:</span>
+                                <button
+                                  className="text-xs text-primary hover:text-primary/80"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedExtraData(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(record.id)) next.delete(record.id); else next.add(record.id);
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  {expandedExtraData.has(record.id) ? 'Show Less' : 'Show More'}
+                                </button>
                               </div>
-                              <div className="bg-gray-100 p-3 rounded-lg border">
-                                <p className="font-mono text-xs break-all text-gray-800 cursor-pointer hover:bg-gray-200 transition-colors" 
-                                   onClick={() => navigator.clipboard.writeText(record.fittingId)}
-                                   title="Click to copy">
-                                  {record.fittingId}
-                      </p>
-                    </div>
-                  </div>
-                  
-                            {record.transactionHash && (
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <Shield className="h-4 w-4 text-gray-500" />
-                                  <span className="text-sm font-medium text-gray-700">Transaction Hash</span>
-                                </div>
-                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                  <a className="text-blue-700 hover:text-blue-800 font-mono text-xs break-all inline-flex items-center gap-2" 
-                                     href={bscscanTx(record.transactionHash)} target="_blank" rel="noreferrer">
-                                    {record.transactionHash}
-                                    <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                                  </a>
-                                </div>
-                    </div>
-                            )}
-                            
-                    {record.blockNumber && (
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <Package className="h-4 w-4 text-gray-500" />
-                                  <span className="text-sm font-medium text-gray-700">Block Number</span>
-                                </div>
-                                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                                  <p className="font-mono text-sm font-semibold text-green-800">
-                                    #{record.blockNumber.toLocaleString()}
-                                  </p>
-                                </div>
+                              <div className="bg-background-light dark:bg-background-dark rounded-lg p-3 space-y-2">
+                                {Object.entries(record.data)
+                                  .slice(0, expandedExtraData.has(record.id) ? undefined : 4)
+                                  .map(([key, value]) => (
+                                    <div key={key} className="flex items-start justify-between gap-3 text-sm min-w-0">
+                                      <span className="text-subtle-light dark:text-subtle-dark flex-shrink-0">{formatDataKey(key)}:</span>
+                                      <span className="text-foreground-light dark:text-foreground-dark font-mono break-all text-right">
+                                        {formatDataValue(value)}
+                                      </span>
+                                    </div>
+                                  ))}
+                              </div>
                       </div>
                     )}
-                          </div>
-
-                          {/* Additional Info Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="space-y-2">
-                              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Event Type</span>
-                              <div className="flex items-center gap-2">
-                                {getEventTypeIcon(record.eventType)}
-                                <span className="text-sm font-medium capitalize">{record.eventType}</span>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Status</span>
-                              <div>{getStatusBadge(record.verificationStatus)}</div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Timestamp</span>
-                              <p className="text-sm text-gray-800">{record.timestamp.toLocaleString()}</p>
-                            </div>
-                            
-                    {record.gasUsed && (
-                              <div className="space-y-2">
-                                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Gas Used</span>
-                                <p className="text-sm font-mono text-gray-800">{record.gasUsed.toLocaleString()}</p>
-                              </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                            {record.transactionHash && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(bscscanTx(record.transactionHash), '_blank');
+                                }}
+                                className="flex-1"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View on BSCScan
+                              </Button>
                             )}
-                          </div>
-
-                          {/* Clean Data Display */}
-                          <div className="space-y-2">
-                            <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Transaction Data</span>
-                            <div className="bg-white border rounded-lg p-4">
-                              <div className="space-y-3">
-                                {Object.entries(record.data).map(([key, value]) => (
-                                  <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-700 min-w-0 sm:w-32 flex-shrink-0">
-                                      {formatDataKey(key)}:
-                                    </span>
-                                    <div className="flex-1 min-w-0">
-                                      {typeof value === 'object' && value !== null ? (
-                                        <div className="bg-gray-50 p-2 rounded border text-xs">
-                                          <pre className="whitespace-pre-wrap break-words text-gray-800">
-                                            {JSON.stringify(value, null, 2)}
-                                          </pre>
-                                        </div>
-                                      ) : (
-                                        <span className="text-sm text-gray-800 break-words">
-                                          {formatDataValue(value)}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onViewTransaction) {
+                                  onViewTransaction(record.transactionHash || record.fittingId);
+                                }
+                              }}
+                              className="flex-1"
+                            >
+                              <span className="material-symbols-outlined text-base mr-2">visibility</span>
+                              View Details
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(JSON.stringify(record, null, 2));
+                              }}
+                              className="flex-1"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Copy Details
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -890,16 +990,21 @@ export function BlockchainAudit() {
                   </div>
                 );
               })}
+              
+              {recentRecords.length === 0 && (
+                <div className="bg-background-light dark:bg-background-dark/50 rounded-lg p-8 text-center">
+                  <Shield className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">No recent transactions found</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                    Transactions will appear here as they are processed
+                  </p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-2">No previous transactions found</p>
-              <p className="text-sm text-gray-400">They will appear here as they are recorded</p>
+          </section>
             </div>
-          )}
-        </CardContent>
-      </Card>
+      </main>
+
     </div>
   );
 }

@@ -1,0 +1,212 @@
+# Transaction Wizard Component Documentation
+
+## Overview
+The TransactionWizard component is a mobile-first, wizard-style interface for displaying blockchain transaction details, following the exact Stitch AI design approach from txs.html. It provides a clean, professional, and government-app-friendly interface for viewing detailed transaction information.
+
+## Key Features
+
+### 1. Mobile-First Design
+- **Responsive Layout**: Single-column, stacked layout optimized for mobile devices
+- **Touch-Friendly**: Minimum 44px touch targets for all interactive elements
+- **Full-Width Cards**: Cards utilize full screen width on mobile for better readability
+- **Smooth Animations**: Slide and fade transitions for step expansions
+
+### 2. Wizard-Style Step Expansion
+- **Progressive Disclosure**: Extra data is hidden by default, expands step-by-step
+- **Four Main Steps**:
+  - Basic Information (Part ID, Date/Time, Status)
+  - Transaction Details (Hash, Block Number, Event Type)
+  - Part Information (Part Hash, Condition)
+  - Location & Personnel (Depot ID, Officer ID, Location)
+- **Smooth Transitions**: 300ms ease-in-out animations for expanding/collapsing
+
+### 3. Data Display & Interaction
+- **Smart Hash Truncation**: Shows first 4 + last 4 characters (e.g., 0x32d6...6edb46)
+- **Copy-to-Clipboard**: Individual copy buttons for hashes and important data
+- **Toast Feedback**: Instant visual feedback when copying data
+- **Icon Integration**: Material Symbols icons for each field type
+
+### 4. Visual Design
+- **Glass Morphism**: Subtle backdrop blur effects for modern appearance
+- **Rounded Corners**: 12-16px border radius for cards
+- **Stitch AI Colors**: Primary blue (#1773cf) with proper contrast ratios
+- **Typography Hierarchy**: Clear heading/body text distinction
+- **Status Indicators**: Color-coded status badges with dots
+
+### 5. Action Buttons
+- **View on BSCScan**: Full-width primary button with external link icon
+- **Copy Details**: Secondary button for copying all transaction data
+- **Back Navigation**: Proper back button with smooth navigation
+
+## Component Structure
+
+### TransactionWizard.tsx
+```typescript
+interface TransactionData {
+  partId: string;
+  partHash: string;
+  transactionHash: string;
+  blockNumber: number;
+  eventType: string;
+  depotId: string;
+  officerId: string;
+  location: string;
+  condition: string;
+  dateTime: string;
+  status: 'confirmed' | 'pending' | 'failed';
+  additionalData?: Record<string, any>;
+}
+
+interface WizardStep {
+  id: string;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  fields: Array<{
+    key: string;
+    label: string;
+    value: string | number;
+    icon: React.ComponentType<{ className?: string }>;
+    copyable?: boolean;
+  }>;
+}
+```
+
+### Key Functions
+- `copyToClipboard()`: Handles clipboard operations with error handling
+- `toggleStep()`: Manages step expansion/collapse state
+- `truncateHash()`: Smart hash truncation for mobile display
+- `getStatusConfig()`: Returns appropriate styling for transaction status
+
+## Integration Points
+
+### 1. BlockchainAudit Integration
+- Added "View Details" button to each transaction record
+- Passes transaction ID to TransactionWizard component
+- Maintains existing BSCScan and Copy Details functionality
+
+### 2. App.tsx Routing
+- New route: `transaction-details`
+- Proper back navigation to blockchain audit page
+- Maintains existing navigation structure
+
+### 3. CSS Integration
+- Glass effect styles added to `index.css`
+- Consistent with existing design system
+- Dark mode support included
+
+## Mobile Optimizations
+
+### Touch Targets
+- All buttons meet 44px minimum touch target requirement
+- Active scale animations (scale-95) for touch feedback
+- Proper spacing between interactive elements
+
+### Responsive Design
+- Grid layouts adapt from 2-column to single-column on mobile
+- Font sizes scale appropriately (text-sm to text-lg)
+- Padding adjusts from p-4 to p-3 on smaller screens
+
+### Performance
+- Smooth 60fps animations using CSS transforms
+- Efficient state management with React hooks
+- Minimal re-renders with proper key usage
+
+## Accessibility Features
+
+### ARIA Support
+- Proper button labels and descriptions
+- Screen reader friendly field labels
+- Keyboard navigation support
+
+### Visual Accessibility
+- High contrast ratios for text
+- Color-blind friendly status indicators
+- Clear visual hierarchy
+
+## Usage Example
+
+```typescript
+import { TransactionWizard } from './components/ui/TransactionWizard';
+
+const sampleTransaction = {
+  partId: 'AXLE-BR-54321A',
+  partHash: '0x32d66592a1469a72e5c5531d4a14360925665edb46',
+  transactionHash: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+  blockNumber: 123456,
+  eventType: 'Installation',
+  depotId: 'Depot 789',
+  officerId: 'Officer 456',
+  location: 'Track 10',
+  condition: 'Good',
+  dateTime: '2024-07-26 14:30',
+  status: 'confirmed'
+};
+
+<TransactionWizard 
+  transaction={sampleTransaction} 
+  onBack={() => navigateBack()}
+/>
+```
+
+## Design Consistency
+
+### Stitch AI Compliance
+- Exact color scheme matching txs.html
+- Consistent typography (Public Sans font family)
+- Same glass morphism effects
+- Identical button styling and interactions
+
+### Government App Standards
+- Professional, clean appearance
+- Clear information hierarchy
+- Reliable functionality
+- Accessible design patterns
+
+## Future Enhancements
+
+### Potential Improvements
+1. **Search Functionality**: Add search within transaction details
+2. **Export Options**: PDF/CSV export for transaction data
+3. **History Tracking**: Show transaction history timeline
+4. **Real-time Updates**: Live status updates for pending transactions
+5. **Offline Support**: Cache transaction data for offline viewing
+
+### Performance Optimizations
+1. **Virtual Scrolling**: For large transaction lists
+2. **Lazy Loading**: Load transaction details on demand
+3. **Caching**: Implement smart caching for frequently accessed data
+4. **Bundle Splitting**: Code splitting for better load times
+
+## Testing Recommendations
+
+### Mobile Testing
+- Test on various screen sizes (320px to 768px)
+- Verify touch interactions work smoothly
+- Check performance on lower-end devices
+- Test with different orientations
+
+### Accessibility Testing
+- Screen reader compatibility
+- Keyboard navigation
+- High contrast mode support
+- Color blindness simulation
+
+### Browser Testing
+- Chrome, Firefox, Safari mobile
+- Different Android/iOS versions
+- WebView compatibility
+- PWA functionality
+
+## Conclusion
+
+The TransactionWizard component successfully implements a mobile-first, wizard-style interface that follows Stitch AI design principles while providing a professional, government-app-friendly experience. The component offers smooth interactions, clear data presentation, and maintains consistency with the existing dashboard design system.
+
+The implementation includes all requested features:
+- ✅ Wizard-style step expansion
+- ✅ Mobile-first responsive design
+- ✅ Copy-to-clipboard functionality
+- ✅ BSCScan integration
+- ✅ Smooth animations and transitions
+- ✅ Professional, clean layout
+- ✅ Government-app-friendly styling
+- ✅ Full integration with existing components
