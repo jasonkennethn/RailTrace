@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
 import { 
   Package, 
   Clock, 
@@ -237,23 +236,26 @@ export function VendorDashboard() {
     <div className="vendor-scope min-h-screen pb-20" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
       {/* Header */}
       <div className="sticky top-0 z-20 border-b backdrop-blur-sm" style={{ backgroundColor: 'color-mix(in oklab, var(--color-card) 90%, transparent)', borderColor: 'var(--color-border)' }}>
-        <div className="px-4 pt-4 pb-3">
+        <div className="container mx-auto px-4 pt-4 pb-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>RailTrace</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="font-bold tracking-tight" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.25rem)' }}>RailTrace</h1>
+              <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary) 12%, transparent)', color: 'var(--color-primary)' }} aria-label="Role: Vendor">विक्रेता / Vendor</span>
+            </div>
             <div className="flex items-center gap-2">
-              <button aria-label="Refresh" className="flex h-10 w-10 items-center justify-center rounded-full touch-target transition-colors" style={{ color: 'var(--color-text-secondary)' }}>
+              <button aria-label="Refresh" className="flex h-11 w-11 items-center justify-center rounded-full touch-target transition-colors" style={{ color: 'var(--color-text-secondary)' }}>
                 <RefreshCw className="h-5 w-5" />
               </button>
-              <button aria-label="New Batch" className="flex h-10 w-10 items-center justify-center rounded-full touch-target text-white" style={{ backgroundColor: 'var(--color-primary)' }}>
+              <button aria-label="New Batch" className="flex h-11 w-11 items-center justify-center rounded-full touch-target text-white" style={{ backgroundColor: 'var(--color-primary)' }}>
                 <Plus className="h-5 w-5" />
               </button>
             </div>
           </div>
-          <h2 className="mt-4 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Namaste, {userData?.name || 'Vendor'}</h2>
+          <h2 className="mt-4 font-bold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1.25rem, 2.5vw, 1.75rem)' }}>Namaste, {userData?.name || 'Vendor'}</h2>
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="container mx-auto p-4 space-y-6">
         {/* KPI with micro-visualizations */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 3xl:grid-cols-5">
           {/* Total Batches - sparkline */}
@@ -324,12 +326,17 @@ export function VendorDashboard() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <h3 id="performance-overview" className="text-lg font-semibold text-foreground-light dark:text-foreground-dark">Performance Overview</h3>
+                <h3 id="performance-overview" className="font-semibold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.125rem)' }}>Performance Overview</h3>
                 <div className="flex items-center gap-2">
                   <select
                     value={selectedTimeRange}
                     onChange={(e) => setSelectedTimeRange(e.target.value)}
-                    className="text-sm border border-border-light dark:border-border-dark rounded-lg px-3 py-1 bg-surface-light dark:bg-surface-dark text-content-light dark:text-content-dark"
+                    className="text-sm rounded-lg px-3 py-1"
+                    style={{
+                      backgroundColor: 'var(--color-card)',
+                      color: 'var(--color-text-primary)',
+                      border: '1px solid var(--color-border)'
+                    }}
                   >
                     <option value="7d">Last 7 days</option>
                     <option value="30d">Last 30 days</option>
@@ -363,11 +370,11 @@ export function VendorDashboard() {
           {/* Fitting Types Distribution */}
           <Card>
             <CardHeader>
-              <h3 id="fitting-types" className="text-lg font-semibold text-foreground-light dark:text-foreground-dark">Fitting Types Distribution</h3>
+              <h3 id="fitting-types" className="font-semibold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.125rem)' }}>Fitting Types Distribution</h3>
             </CardHeader>
             <CardContent>
               {fittingTypeData.length === 0 ? (
-                <div className="h-80 flex items-center justify-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>No fitting distribution data</div>
+                <div className="h-80 flex items-center justify-center text-sm" style={{ color: 'var(--color-text-secondary)' }} aria-live="polite">No fitting distribution data</div>
               ) : (
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
@@ -387,16 +394,16 @@ export function VendorDashboard() {
         </div>
 
         {/* Recent Batches */}
-        <Card>
+          <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <h3 id="recent-batches" className="text-lg font-semibold text-[#0d1117] dark:text-[#c9d1d9]">Recent Batches</h3>
+                <h3 id="recent-batches" className="font-semibold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.125rem)' }}>Recent Batches</h3>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="border-[#d0d7de] dark:border-[#30363d] text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#0d1117]">
+                  <Button variant="outline" size="sm" className="hover:opacity-90" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}>
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
-                <Button variant="outline" size="sm" className="border-[#d0d7de] dark:border-[#30363d] text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#0d1117]">
+                  <Button variant="outline" size="sm" className="hover:opacity-90" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}>
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
@@ -414,34 +421,38 @@ export function VendorDashboard() {
                 {visibleBatches.map((batch) => (
                   <div
                     key={batch.id}
-                    className="flex items-center justify-between p-4 bg-[#f0f2f5] dark:bg-[#0d1117] rounded-lg border border-[#d0d7de] dark:border-[#30363d]"
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)' }}
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-[#1773cf]/10 rounded-lg flex items-center justify-center">
-                        <Package className="h-6 w-6 text-[#1773cf]" />
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary) 12%, transparent)' }}>
+                        <Package className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-[#0d1117] dark:text-[#c9d1d9]">
+                        <h4 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                           {batch.batchNumber}
                         </h4>
-                        <p className="text-sm text-[#57606a] dark:text-[#8b949e]">
+                        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                           {batch.fittingType} • {batch.quantity} units
                         </p>
-                        <p className="text-xs text-[#57606a] dark:text-[#8b949e]">
+                        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                           Created: {batch.createdAt.toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Badge className={(() => {
-                        switch (batch.status) {
-                          case 'manufacturing': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-                          case 'ready': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-                          case 'shipped': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
-                          case 'delivered': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-                          default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
-                        }
-                      })()}>
+                      <div className="px-2 py-1 rounded-full text-xs font-medium" style={{
+                        backgroundColor: (() => {
+                          switch (batch.status) {
+                            case 'manufacturing': return 'color-mix(in srgb, var(--chart-warning) 18%, transparent)';
+                            case 'ready': return 'color-mix(in srgb, var(--color-primary) 18%, transparent)';
+                            case 'shipped': return 'color-mix(in srgb, var(--color-accent) 18%, transparent)';
+                            case 'delivered': return 'color-mix(in srgb, var(--chart-success) 18%, transparent)';
+                            default: return 'color-mix(in srgb, var(--color-text-secondary) 12%, transparent)';
+                          }
+                        })(),
+                        color: 'var(--color-text-primary)'
+                      }}>
                         <div className="flex items-center gap-1">
                           {(() => {
                             switch (batch.status) {
@@ -454,8 +465,8 @@ export function VendorDashboard() {
                           })()}
                           {batch.status.replace('_', ' ')}
                         </div>
-                      </Badge>
-                      <Button variant="outline" size="sm" className="border-[#d0d7de] dark:border-[#30363d] text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#0d1117]">
+                      </div>
+                      <Button variant="outline" size="sm" className="hover:opacity-90" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }} aria-label="View batch details">
                         <Eye className="h-4 w-4" />
                       </Button>
                     </div>
@@ -472,9 +483,9 @@ export function VendorDashboard() {
         </Card>
 
         {/* Recent Shipments */}
-        <Card>
+          <Card>
           <CardHeader>
-            <h3 id="recent-shipments" className="text-lg font-semibold text-foreground-light dark:text-foreground-dark">Recent Shipments</h3>
+              <h3 id="recent-shipments" className="font-semibold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.125rem)' }}>Recent Shipments</h3>
           </CardHeader>
           <CardContent>
             {visibleShipments.length === 0 ? (
@@ -487,33 +498,37 @@ export function VendorDashboard() {
                 {visibleShipments.map((shipment) => (
                   <div
                     key={shipment.id}
-                    className="flex items-center justify-between p-4 bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark"
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)' }}
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Truck className="h-6 w-6 text-primary" />
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary) 12%, transparent)' }}>
+                        <Truck className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-foreground-light dark:text-foreground-dark">
+                        <h4 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                           {shipment.trackingNumber}
                         </h4>
-                        <p className="text-sm text-subtle-light dark:text-subtle-dark">
+                        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                           {shipment.destination} • Batch: {shipment.batchId}
                         </p>
-                        <p className="text-xs text-subtle-light dark:text-subtle-dark">
+                        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                           Created: {shipment.createdAt.toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Badge className={(() => {
-                        switch (shipment.status) {
-                          case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-                          case 'in_transit': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-                          case 'delivered': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-                          default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
-                        }
-                      })()}>
+                      <div className="px-2 py-1 rounded-full text-xs font-medium" style={{
+                        backgroundColor: (() => {
+                          switch (shipment.status) {
+                            case 'pending': return 'color-mix(in srgb, var(--chart-warning) 18%, transparent)';
+                            case 'in_transit': return 'color-mix(in srgb, var(--color-primary) 18%, transparent)';
+                            case 'delivered': return 'color-mix(in srgb, var(--chart-success) 18%, transparent)';
+                            default: return 'color-mix(in srgb, var(--color-text-secondary) 12%, transparent)';
+                          }
+                        })(),
+                        color: 'var(--color-text-primary)'
+                      }}>
                         <div className="flex items-center gap-1">
                           {(() => {
                             switch (shipment.status) {
@@ -525,8 +540,8 @@ export function VendorDashboard() {
                           })()}
                           {shipment.status.replace('_', ' ')}
                         </div>
-                      </Badge>
-                      <Button variant="outline" size="sm">
+                      </div>
+                      <Button variant="outline" size="sm" className="hover:opacity-90" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }} aria-label="View shipment details">
                         <Eye className="h-4 w-4" />
                       </Button>
                     </div>
