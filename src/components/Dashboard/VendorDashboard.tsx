@@ -212,6 +212,16 @@ export function VendorDashboard() {
   const pendingRatio = totalShipments > 0 ? (stats.pendingShipments / totalShipments) : 0;
   const completedBars = shipmentsTrend.slice(-6); // recent small bars
 
+  // AI Analytical Score (derive from quality if present, else fallback)
+  const aiScore = useMemo(() => {
+    const qualityPoints = chartData.map(p => typeof p.quality === 'number' ? (p.quality as number) : undefined).filter((v): v is number => typeof v === 'number');
+    if (qualityPoints.length > 0) {
+      const avg = qualityPoints.reduce((a, b) => a + b, 0) / qualityPoints.length;
+      return Math.round(avg * 10) / 10; // one decimal
+    }
+    return 92.5; // Stitch-style fallback
+  }, [chartData]);
+
   const buildSparkPath = (values: number[], width = 80, height = 24) => {
     if (values.length === 0) return '';
     const min = Math.min(...values);
@@ -257,9 +267,9 @@ export function VendorDashboard() {
 
       <div className="container mx-auto p-4 space-y-6">
         {/* KPI with micro-visualizations */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 3xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 3xl:grid-cols-6">
           {/* Total Batches - sparkline */}
-          <button onClick={() => scrollToAnchor('recent-batches')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }}>
+          <button onClick={() => scrollToAnchor('recent-batches')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }} aria-label="KPI: Total Batches" data-i18n-key="kpi.totalBatches">
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Total Batches</p>
               <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.totalBatches.toString()}</p>
@@ -270,7 +280,7 @@ export function VendorDashboard() {
           </button>
 
           {/* Pending Shipments - donut progress */}
-          <button onClick={() => scrollToAnchor('recent-shipments')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }}>
+          <button onClick={() => scrollToAnchor('recent-shipments')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }} aria-label="KPI: Pending Shipments" data-i18n-key="kpi.pendingShipments">
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Pending Shipments</p>
               <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.pendingShipments}</p>
@@ -282,7 +292,7 @@ export function VendorDashboard() {
           </button>
 
           {/* Completed - mini bars */}
-          <button onClick={() => scrollToAnchor('recent-shipments')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }}>
+          <button onClick={() => scrollToAnchor('recent-shipments')} className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }} aria-label="KPI: Completed Shipments" data-i18n-key="kpi.completedShipments">
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Completed</p>
               <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.completedShipments}</p>
@@ -297,7 +307,7 @@ export function VendorDashboard() {
           </button>
 
           {/* QR Codes Generated - sparkline (reuse batches trend as proxy if QR trend not available) */}
-          <button className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }}>
+          <button className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95" style={{ backgroundColor: 'var(--color-card)' }} aria-label="KPI: QR Codes Generated" data-i18n-key="kpi.qrCodesGenerated">
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>QR Generated</p>
               <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.qrCodesGenerated}</p>
@@ -308,7 +318,7 @@ export function VendorDashboard() {
           </button>
 
           {/* Blockchain Records - donut ring (assume all confirmed if no split provided) */}
-          <button className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95 md:col-span-1 col-span-2" style={{ backgroundColor: 'var(--color-card)' }}>
+          <button className="flex flex-col gap-2 rounded-xl p-4 transition-transform active:scale-95 md:col-span-1 col-span-2" style={{ backgroundColor: 'var(--color-card)' }} aria-label="KPI: Blockchain Records" data-i18n-key="kpi.blockchainRecords">
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Blockchain Records</p>
               <p className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.blockchainRecords}</p>
@@ -318,6 +328,12 @@ export function VendorDashboard() {
               <circle cx="18" cy="18" r="16" fill="none" stroke="var(--chart-primary)" strokeWidth="4" strokeDasharray={`100 0`} strokeDashoffset="0" pathLength="100" />
             </svg>
           </button>
+
+          {/* AI Analytical Score */}
+          <div className="flex flex-col justify-center items-center gap-1 rounded-xl p-4 text-center" style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary) 10%, transparent)' }} aria-label="KPI: AI Analytical Score" data-i18n-key="kpi.aiScore">
+            <p className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>एआई विश्लेषणात्मक स्कोर / AI Analytical Score</p>
+            <p className="text-3xl font-bold" style={{ color: 'var(--color-primary)' }}>{aiScore}</p>
+          </div>
         </div>
 
         {/* Charts Row */}
@@ -326,7 +342,7 @@ export function VendorDashboard() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <h3 id="performance-overview" className="font-semibold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.125rem)' }}>Performance Overview</h3>
+                <h3 id="performance-overview" className="font-semibold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.125rem)' }} aria-label="Performance Overview" data-i18n-key="charts.performanceOverview">Performance Overview</h3>
                 <div className="flex items-center gap-2">
                   <select
                     value={selectedTimeRange}
@@ -370,7 +386,7 @@ export function VendorDashboard() {
           {/* Fitting Types Distribution */}
           <Card>
             <CardHeader>
-              <h3 id="fitting-types" className="font-semibold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.125rem)' }}>Fitting Types Distribution</h3>
+              <h3 id="fitting-types" className="font-semibold" style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(1rem, 2vw, 1.125rem)' }} aria-label="Fitting Types Distribution" data-i18n-key="charts.fittingTypes">Fitting Types Distribution</h3>
             </CardHeader>
             <CardContent>
               {fittingTypeData.length === 0 ? (
