@@ -48,6 +48,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Load translations when language changes
     loadTranslations(language).then(setTranslations);
+    // Update document language and direction
+    try {
+      const html = document.documentElement;
+      html.setAttribute('lang', language);
+      const rtlLanguages: Language[] = ['ur'];
+      html.setAttribute('dir', rtlLanguages.includes(language) ? 'rtl' : 'ltr');
+    } catch {}
   }, [language]);
 
   const setLanguage = (newLanguage: Language) => {

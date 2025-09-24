@@ -182,7 +182,7 @@ export function Settings() {
         >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <h1 className="text-lg font-bold text-[#0d1117] dark:text-[#c9d1d9]">{t('settings.title')}</h1>
+        <h1 className="text-lg font-bold text-[#0d1117] dark:text-[#c9d1d9]">{t('Title')}</h1>
         <div></div>
       </header>
 
@@ -190,7 +190,7 @@ export function Settings() {
           <div className="space-y-6">
             {/* Theme */}
             <div className="p-4 bg-[#ffffff] dark:bg-[#161b22] rounded-lg border border-[#d0d7de] dark:border-[#30363d]">
-              <h2 className="mb-4 text-lg font-semibold text-[#0d1117] dark:text-[#c9d1d9]">{t('settings.theme')}</h2>
+              <h2 className="mb-4 text-lg font-semibold text-[#0d1117] dark:text-[#c9d1d9]">{t('Theme')}</h2>
               <div className="flex gap-2 p-1 rounded-lg bg-[#f0f2f5] dark:bg-[#0d1117]">
                 <button 
                   className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
@@ -202,7 +202,7 @@ export function Settings() {
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Sun className="h-4 w-4" />
-{t('theme.light')}
+{t('Light')}
                   </div>
                 </button>
                 <button 
@@ -215,7 +215,7 @@ export function Settings() {
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Moon className="h-4 w-4" />
-{t('theme.dark')}
+{t('Dark')}
                   </div>
                 </button>
               </div>
@@ -259,7 +259,7 @@ export function Settings() {
 
             {/* System Settings */}
             <div className="p-4 bg-[#ffffff] dark:bg-[#161b22] rounded-lg border border-[#d0d7de] dark:border-[#30363d]">
-              <h2 className="mb-4 text-lg font-semibold text-[#0d1117] dark:text-[#c9d1d9]">{t('settings.systemSettings')}</h2>
+              <h2 className="mb-4 text-lg font-semibold text-[#0d1117] dark:text-[#c9d1d9]">{t('SystemSettings')}</h2>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>

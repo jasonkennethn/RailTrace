@@ -254,40 +254,7 @@ export function AdminDashboard() {
     <SmoothPageTransition>
       <div className="font-display min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         <div className="relative flex h-auto min-h-screen w-full flex-col group/design-root">
-        {/* Header - Exact Stitch AI Match */}
-        <header className="sticky top-0 z-10 backdrop-blur-sm shadow-sm transform-gpu" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 80%, transparent)' }}>
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between p-2.5 sm:p-4 min-h-12 sm:min-h-16 flex-nowrap">
-              <div className="flex items-center gap-2 shrink-0">
-                <img 
-                  alt="Indian Railways Logo" 
-                  className="h-7 w-7 sm:h-10 sm:w-10 object-contain" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1twyRXwjo371pDweXtog1UaWqSMFJXQVnZVohBk0PsVJSEj76N2iW1J6rd0Mw_04zGsCl_zhvEhnDf5uXy6JBznCuYQ-LyIWa9-5htLX0TL7ABRV9Tcsms_zJn6-GaN9F342RJ9uiGrIrvqvWpK7MxycThUnhHocwJP-4uPF8DszWYIE9sNeiUrU2dJcS8KXPfbR8VDJhbE4-sTCEdNOUxU78z68xNmbwwUUNb8iN_vGBPfBlazj_SGU5K6F57ur4JcpKGInmVUc0"
-                />
-                <h1 className="text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>RailTrace</h1>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                <div className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
-                  <span className="relative flex h-2.5 w-2.5 sm:h-3 sm:w-3">
-                    <span className="animate-none sm:animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-green-500"></span>
-                  </span>
-                  <span className="hidden sm:inline text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Online</span>
-                </div>
-                <div className="shrink-0 scale-90 sm:scale-100 origin-center">
-                  <RealTimeNotifications />
-      </div>
-                <button className="shrink-0">
-                  <img 
-                    alt="User profile" 
-                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover" 
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJlWuAbwR4MBLGiOvdbFImCEwktaEWt2XJK0RDhoAZbgfU8uZ_oEVA-Bxijr5Dr0wqMHayW2hCzHsqBf8MJ_RNWnhYscvsE5KhQJxKN9EqMiwEdQsplh4MzdawDNQUUq2IBn601rP4nDy9lv3EYr0WQM6HHp-tyZhOEbS5ZDxJKSVpqOE6NmxhOYYHYCi-HazAdFE7bg2dWMPzu1-w_GHyDudgTti4AtR25kjbuFDiu7vb9HhbraQi7mFe6aPonri-CnsTTDkfxWtT"
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
+        {/* Global Header is rendered by App; remove duplicate page header */}
 
         {/* Main Content */}
         <main className="flex-1 p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
