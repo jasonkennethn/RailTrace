@@ -374,6 +374,25 @@ ${type},${dateRange},${reportData.generatedAt},${reportData.summary.totalTransac
 
   const filterOptions = ['Total Parts', 'Active Vendors', 'Inspections Today', 'Failure Rate'];
 
+  const scrollByFilter = (option: string) => {
+    switch (option) {
+      case 'Total Parts':
+        scrollTo(partsSectionRef);
+        break;
+      case 'Active Vendors':
+        scrollTo(vendorsSectionRef);
+        break;
+      case 'Inspections Today':
+        scrollTo(inspectionsSectionRef);
+        break;
+      case 'Failure Rate':
+        scrollTo(failureSectionRef);
+        break;
+      default:
+        break;
+    }
+  };
+
   useEffect(() => {
     // Load available reports list if present
     setReports(mockReports);
@@ -442,11 +461,11 @@ ${type},${dateRange},${reportData.generatedAt},${reportData.summary.totalTransac
 
         <div className="p-4">
           {/* Top Stats with micro-visualizations */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
             {/* Total Parts with sparkline */}
-            <button onClick={() => scrollTo(partsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow">
-              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark">Total Parts</p>
-              <p className="text-lg sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{realTimeData.partsRegistered.toLocaleString()}</p>
+            <button onClick={() => scrollTo(partsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark truncate">Total Parts</p>
+              <p className="text-xl sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{realTimeData.partsRegistered.toLocaleString()}</p>
               <div className="mt-2 h-8">
                 <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
                   <defs>
@@ -487,10 +506,10 @@ ${type},${dateRange},${reportData.generatedAt},${reportData.summary.totalTransac
             </button>
 
             {/* Active Vendors with donut */}
-            <button onClick={() => scrollTo(vendorsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow">
-              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark">Active Vendors</p>
+            <button onClick={() => scrollTo(vendorsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark truncate">Active Vendors</p>
               <div className="flex items-center justify-between mt-1">
-                <p className="text-lg sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{realTimeData.vendorsActive.toLocaleString()}</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{realTimeData.vendorsActive.toLocaleString()}</p>
                 <svg width="40" height="40" viewBox="0 0 36 36" className="shrink-0">
                   <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--color-border)" strokeWidth="3" />
                   {(() => {
@@ -506,14 +525,14 @@ ${type},${dateRange},${reportData.generatedAt},${reportData.summary.totalTransac
                   })()}
                 </svg>
               </div>
-              <p className="mt-1 text-xs text-subtle-light dark:text-subtle-dark">Compliant {vendorsCompliant} · Flagged {vendorsFlagged}</p>
+              <p className="mt-1 text-xs text-subtle-light dark:text-subtle-dark truncate">Compliant {vendorsCompliant} · Flagged {vendorsFlagged}</p>
             </button>
 
             {/* Inspections Today with progress circle */}
-            <button onClick={() => scrollTo(inspectionsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow">
-              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark">Inspections Today</p>
+            <button onClick={() => scrollTo(inspectionsSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark truncate">Inspections Today</p>
               <div className="flex items-center justify-between mt-1">
-                <p className="text-lg sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{(realTimeData.inspectionsPassed + realTimeData.inspectionsFailed + realTimeData.inspectionsPending).toLocaleString()}</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground-light dark:text-foreground-dark">{(realTimeData.inspectionsPassed + realTimeData.inspectionsFailed + realTimeData.inspectionsPending).toLocaleString()}</p>
                 <div className="relative flex items-center justify-center" style={{width: 40, height: 40}}>
                   {(() => {
                     const total = realTimeData.inspectionsPassed + realTimeData.inspectionsFailed + realTimeData.inspectionsPending;
@@ -534,14 +553,14 @@ ${type},${dateRange},${reportData.generatedAt},${reportData.summary.totalTransac
                   })()}</span>
                 </div>
               </div>
-              <p className="mt-1 text-xs text-subtle-light dark:text-subtle-dark">Completed {realTimeData.inspectionsPassed + realTimeData.inspectionsFailed}</p>
+              <p className="mt-1 text-xs text-subtle-light dark:text-subtle-dark truncate">Completed {realTimeData.inspectionsPassed + realTimeData.inspectionsFailed}</p>
             </button>
 
             {/* Failure Rate with mini area */}
-            <button onClick={() => scrollTo(failureSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow">
-              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark">Failure Rate</p>
+            <button onClick={() => scrollTo(failureSectionRef)} className="bg-card-light dark:bg-card-dark rounded-xl p-3 sm:p-4 shadow-sm border border-token text-left hover:shadow-md transition-shadow min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-subtle-light dark:text-subtle-dark truncate">Failure Rate</p>
               <div className="flex items-center gap-1 text-danger-light dark:text-danger-dark">
-                <p className="text-lg sm:text-2xl font-bold">{(() => {
+                <p className="text-xl sm:text-2xl font-bold">{(() => {
                   const total = realTimeData.inspectionsPassed + realTimeData.inspectionsFailed;
                   const rate = total > 0 ? (realTimeData.inspectionsFailed / total) * 100 : 0;
                   return `${rate.toFixed(1)}%`;
@@ -578,7 +597,7 @@ ${type},${dateRange},${reportData.generatedAt},${reportData.summary.totalTransac
               {filterOptions.map((option) => (
                 <button
                   key={option}
-                  onClick={() => setActiveFilter(option)}
+                  onClick={() => { setActiveFilter(option); scrollByFilter(option); }}
                   className={`px-4 py-2 text-sm font-medium rounded-full shrink-0 ${
                     activeFilter === option
                       ? 'bg-[#1773cf]/10 text-[#1773cf] dark:bg-[#1773cf]/20 dark:text-[#1773cf]'
