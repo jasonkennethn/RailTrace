@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -29,9 +30,7 @@ import {
   Tooltip, 
   ResponsiveContainer,
   LineChart,
-  Line,
-  BarChart,
-  Bar
+  Line
 } from 'recharts';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -79,6 +78,9 @@ export function DepotDashboard() {
   const [transfers, setTransfers] = useState<TransferData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState('7d');
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrResult, setQrResult] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Mock data for demonstration
   const mockStats: DepotStats = {
@@ -165,23 +167,23 @@ export function DepotDashboard() {
     { name: 'Bearing', value: 200, percentage: 16 }
   ];
 
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Simulate API calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setStats(mockStats);
-        setInventory(mockInventory);
-        setTransfers(mockTransfers);
-      } catch (error) {
-        console.error('Error loading depot data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      // Simulate API calls
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setStats(mockStats);
+      setInventory(mockInventory);
+      setTransfers(mockTransfers);
+    } catch (error) {
+      console.error('Error loading depot data:', error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
 
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -242,11 +244,21 @@ export function DepotDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <Button variant="outline" size="sm" className="border-[#d0d7de] dark:border-[#30363d] text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#0d1117] touch-target">
-                <RefreshCw className="h-4 w-4 mr-2" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[#d0d7de] dark:border-[#30363d] text-[#0d1117] dark:text-[#c9d1d9] hover:bg-[#f0f2f5] dark:hover:bg-[#0d1117] touch-target"
+                onClick={() => { setRefreshing(true); loadData(); }}
+                disabled={refreshing || isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
               </Button>
-              <Button size="sm" className="bg-[#1773cf] hover:bg-[#1773cf]/90 text-white touch-target">
+              <Button
+                size="sm"
+                className="bg-[#1773cf] hover:bg-[#1773cf]/90 text-white touch-target"
+                onClick={() => setQrModalOpen(true)}
+              >
                 <ScanLine className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">QR Scanner</span>
                 <span className="sm:hidden">Scan</span>
@@ -256,43 +268,65 @@ export function DepotDashboard() {
         </div>
       </div>
 
-      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      {/* QR Scanner Modal */}
+      {qrModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white dark:bg-[#161b22] rounded-lg shadow-lg p-4 w-full max-w-xs sm:max-w-md mx-2">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-lg font-bold">QR Scanner</h2>
+              <Button variant="outline" size="sm" onClick={() => setQrModalOpen(false)}>Close</Button>
+            </div>
+            <div className="w-full h-64">
+              <Scanner
+                constraints={{ facingMode: 'environment' }}
+                onScan={(value) => setQrResult(value?.[0]?.rawValue || value?.[0] || null as any)}
+                onError={() => { /* ignore */ }}
+                styles={{ container: { width: '100%', height: '100%' } }}
+              />
+            </div>
+            <div className="mt-2">
+              {qrResult ? (
+                <div className="p-2 bg-green-100 rounded text-green-800 text-sm">Scanned: {qrResult}</div>
+              ) : (
+                <div className="p-2 text-xs text-gray-500">Point your camera at a QR code</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+  <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         {/* Stats Overview */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
           <StatsCard
             title="Total Inventory"
             value={stats.totalInventory.toLocaleString()}
             icon={<Package className="h-5 w-5" />}
-            trend="+5%"
-            trendUp={true}
+            trend={{ value: 5, direction: 'up', isGood: true }}
           />
           <StatsCard
             title="Pending Receipts"
             value={stats.pendingReceipts.toString()}
             icon={<Clock className="h-5 w-5" />}
-            trend="+2"
-            trendUp={false}
+            trend={{ value: 2, direction: 'down', isGood: false }}
           />
           <StatsCard
             title="Dispatched Today"
             value={stats.dispatchedToday.toString()}
             icon={<Truck className="h-5 w-5" />}
-            trend="+12%"
-            trendUp={true}
+            trend={{ value: 12, direction: 'up', isGood: true }}
           />
           <StatsCard
             title="QR Scans Today"
             value={stats.qrScansToday.toString()}
             icon={<QrCode className="h-5 w-5" />}
-            trend="+8%"
-            trendUp={true}
+            trend={{ value: 8, direction: 'up', isGood: true }}
           />
           <StatsCard
             title="Critical Alerts"
             value={stats.criticalAlerts.toString()}
             icon={<AlertTriangle className="h-5 w-5" />}
-            trend="-1"
-            trendUp={true}
+            trend={{ value: 1, direction: 'down', isGood: true }}
           />
         </div>
 

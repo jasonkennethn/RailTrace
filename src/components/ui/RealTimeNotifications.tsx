@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, where, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Bell, X, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react';
 
@@ -116,10 +116,23 @@ export function RealTimeNotifications({ className = '' }: RealTimeNotificationsP
     );
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    );
+  const markAllAsRead = async () => {
+    // Optimistic UI update
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+    try {
+      const batch = writeBatch(db);
+      notifications.forEach(n => {
+        if (!n.read) {
+          const ref = doc(db, 'notifications', n.id);
+          batch.update(ref, { read: true });
+        }
+      });
+      await batch.commit();
+    } catch (e) {
+      // If batch fails, keep UI state but log error
+      console.error('Failed to mark all notifications as read:', e);
+    }
   };
 
   const getNotificationIcon = (type: string, priority: string) => {
@@ -194,7 +207,7 @@ export function RealTimeNotifications({ className = '' }: RealTimeNotificationsP
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-[#1773cf] hover:text-[#1773cf]/80 transition-colors"
+                  className="px-2 py-1 text-xs sm:text-sm font-medium text-white bg-[#1773cf] hover:bg-[#1663b3] rounded-md transition-colors"
                 >
                   Mark all as read
                 </button>
