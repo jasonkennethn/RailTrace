@@ -1,7 +1,9 @@
 import React from 'react';
-import { Bell, Search, LogOut, Wifi, WifiOff, Menu, Notifications, User } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Search, LogOut, Wifi, WifiOff, Menu, User } from 'lucide-react';
+// import { Button } from '../ui/Button';
 import { useAuth } from '../../hooks/useAuth';
+
+import { RealTimeNotifications } from '../ui/RealTimeNotifications';
 
 interface HeaderProps {
   onLogout: () => void;
@@ -43,13 +45,16 @@ export function Header({ onLogout, onMenuToggle, isSidebarOpen = false }: Header
           {/* Indian Railways Logo */}
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center p-1">
-              <img 
-                src="https://upload.wikimedia.org/wikipedia/en/8/83/Indian_Railways.svg" 
+              <img
+                src="https://upload.wikimedia.org/wikipedia/en/8/83/Indian_Railways.svg"
                 alt="Indian Railways"
                 className="w-full h-full object-contain filter brightness-0 invert"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling!.style.display = 'block';
+
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                  if (fallback) fallback.style.display = 'block';
+
                 }}
               />
               <div className="hidden text-white font-bold text-xs text-center">
@@ -90,12 +95,7 @@ export function Header({ onLogout, onMenuToggle, isSidebarOpen = false }: Header
           </div>
 
           {/* Notifications */}
-          <button className="relative p-2 text-foreground-light dark:text-foreground-dark hover:bg-black/5 dark:hover:bg-white/5 rounded-lg">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-danger-light dark:bg-danger-dark text-white text-xs rounded-full flex items-center justify-center">
-              3
-            </span>
-          </button>
+          <RealTimeNotifications />
 
           {/* User Profile */}
           <div className="flex items-center space-x-2">
@@ -107,7 +107,7 @@ export function Header({ onLogout, onMenuToggle, isSidebarOpen = false }: Header
                 {userData?.role || 'admin'}
               </p>
             </div>
-            
+
             {/* User Avatar */}
             <div className="relative">
               <button className="flex items-center justify-center w-8 h-8 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors">

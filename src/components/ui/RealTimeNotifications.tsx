@@ -24,7 +24,7 @@ export function RealTimeNotifications({ className = '' }: RealTimeNotificationsP
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Real-time notification subscription
+  // Real-time notification subscription with fallback mock data
   useEffect(() => {
     const q = query(
       collection(db, 'notifications'),
@@ -33,23 +33,76 @@ export function RealTimeNotifications({ className = '' }: RealTimeNotificationsP
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newNotifications = snapshot.docs.map(doc => {
-        const data = doc.data();
+      const docs = snapshot.docs || [];
+      let newNotifications = docs.map(doc => {
+        const data: any = doc.data() || {};
         return {
           id: doc.id,
           title: data.title || 'Notification',
           message: data.message || '',
-          type: data.type || 'info',
-          timestamp: data.timestamp?.toDate() || new Date(),
-          read: data.read || false,
-          source: data.source || 'system',
-          priority: data.priority || 'medium',
-          actionUrl: data.actionUrl
-        };
+          type: (data.type as any) || 'info',
+          timestamp: (data.timestamp && typeof (data.timestamp as any).toDate === 'function') ? (data.timestamp as any).toDate() : new Date(),
+          read: !!data.read,
+          source: (data.source as any) || 'system',
+          priority: (data.priority as any) || 'medium',
+          actionUrl: data.actionUrl as string | undefined
+        } as Notification;
       });
+
+      // If no Firestore notifications, inject mock data
+      if (newNotifications.length === 0) {
+        newNotifications = [
+          {
+            id: 'mock-1',
+            title: 'Welcome to RailTrace',
+            message: 'This is a demo notification. You will see live updates here.',
+            type: 'info',
+            timestamp: new Date(Date.now() - 2 * 60 * 1000),
+            read: false,
+            source: 'system',
+            priority: 'medium'
+          },
+          {
+            id: 'mock-2',
+            title: 'Shipment delayed',
+            message: 'Shipment SHP-1042 is delayed due to weather conditions.',
+            type: 'warning',
+            timestamp: new Date(Date.now() - 45 * 60 * 1000),
+            read: false,
+            source: 'ai',
+            priority: 'high'
+          },
+          {
+            id: 'mock-3',
+            title: 'Block validated',
+            message: 'Blockchain audit confirmed transaction TX-9F3C for batch B-2207.',
+            type: 'success',
+            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
+            read: true,
+            source: 'blockchain',
+            priority: 'low'
+          }
+        ];
+      }
 
       setNotifications(newNotifications);
       setUnreadCount(newNotifications.filter(n => !n.read).length);
+    }, () => {
+      // On subscription error (e.g., missing permissions), show mock data
+      const fallback = [
+        {
+          id: 'mock-err-1',
+          title: 'Demo notifications',
+          message: 'Unable to load from Firestore. Showing sample items.',
+          type: 'info',
+          timestamp: new Date(),
+          read: false,
+          source: 'system',
+          priority: 'medium'
+        }
+      ] as Notification[];
+      setNotifications(fallback);
+      setUnreadCount(1);
     });
 
     return () => unsubscribe();

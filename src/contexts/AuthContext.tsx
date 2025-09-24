@@ -6,7 +6,7 @@ import {
   onAuthStateChanged,
   User as FirebaseUser 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { User } from '../types';
 
@@ -212,7 +212,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getPendingUsers = async (): Promise<User[]> => {
     try {
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
       
       // First, let's get ALL users to see what's actually in the database
       const usersRef = collection(db, 'users');
@@ -326,7 +325,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getAllUsers = async (): Promise<User[]> => {
     try {
-      const { collection, getDocs } = await import('firebase/firestore');
       
       const usersRef = collection(db, 'users');
       const snapshot = await getDocs(usersRef);
@@ -354,7 +352,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Debug function to check database contents
   const debugDatabase = async () => {
     try {
-      const { collection, getDocs } = await import('firebase/firestore');
       
       console.log('🔍 DEBUGGING: Checking all collections in database...');
       
@@ -392,7 +389,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Function to create test pending users
   const createTestPendingUsers = async () => {
     try {
-      const { collection, addDoc } = await import('firebase/firestore');
       
       const testUsers = [
         {
