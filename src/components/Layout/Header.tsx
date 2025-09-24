@@ -4,6 +4,7 @@ import { Search, LogOut, Wifi, WifiOff, Menu, User } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 import { RealTimeNotifications } from '../ui/RealTimeNotifications';
+import { GlobalSearch } from '../ui/GlobalSearch';
 
 interface HeaderProps {
   onLogout: () => void;
@@ -70,14 +71,7 @@ export function Header({ onLogout, onMenuToggle, isSidebarOpen = false }: Header
 
         {/* Center Section - Search (Desktop Only, hide when sidebar open) */}
         <div className={`${isSidebarOpen ? 'hidden' : 'hidden md:flex'} flex-1 max-w-md mx-4`}>
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-subtle-light dark:text-subtle-dark" />
-            <input
-              type="text"
-              placeholder="Search parts, transactions, or reports..."
-              className="w-full pl-10 pr-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark placeholder-subtle-light dark:placeholder-subtle-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-          </div>
+          <GlobalSearch placeholder="Search parts, transactions, or reports..." />
         </div>
 
         {/* Right Section - Actions and User */}
@@ -130,14 +124,7 @@ export function Header({ onLogout, onMenuToggle, isSidebarOpen = false }: Header
       {/* Mobile Search Bar - Only show when sidebar is closed */}
       {!isSidebarOpen && (
         <div className="md:hidden px-4 pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-subtle-light dark:text-subtle-dark" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full pl-10 pr-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark placeholder-subtle-light dark:placeholder-subtle-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-          </div>
+          <GlobalSearch placeholder="Search..." />
         </div>
       )}
     </header>

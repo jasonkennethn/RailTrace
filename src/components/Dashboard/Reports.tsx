@@ -85,6 +85,7 @@ export function Reports() {
     lastUpdate: new Date()
   });
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedPart, setSelectedPart] = useState<PartDetails | null>(null);
   const [showPartModal, setShowPartModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -460,6 +461,78 @@ ${type},${dateRange},${reportData.generatedAt},${reportData.summary.totalTransac
         </header>
 
         <div className="p-4">
+          {/* Responsive Search */}
+          <div className="mb-4">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search reports, vendors, parts, transactions..."
+                className="w-full rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-10 py-2.5 text-content-light dark:text-content-dark placeholder-subtle-light dark:placeholder-subtle-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-subtle-light dark:text-subtle-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </div>
+          </div>
+
+          {/* Search Results (live filtering) */}
+          {searchQuery.trim().length >= 2 && (
+            <div className="mb-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Reports results */}
+              <div className="p-4 bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark">
+                <h3 className="font-semibold text-foreground-light dark:text-foreground-dark mb-2">Report Matches</h3>
+                <div className="space-y-2">
+                  {mockReports.filter(r => (
+                    r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    r.category.toLowerCase().includes(searchQuery.toLowerCase())
+                  )).slice(0, 5).map(r => (
+                    <div key={r.id} className="flex items-center justify-between p-3 rounded-lg border border-border-light dark:border-border-dark">
+                      <div>
+                        <p className="font-medium text-foreground-light dark:text-foreground-dark">{r.title}</p>
+                        <p className="text-xs text-subtle-light dark:text-subtle-dark">{r.period}</p>
+                      </div>
+                      <button onClick={() => handleGenerateReport(r.title)} className="text-sm text-primary hover:text-primary/80">Generate</button>
+                    </div>
+                  ))}
+                  {mockReports.filter(r => (
+                    r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    r.category.toLowerCase().includes(searchQuery.toLowerCase())
+                  )).length === 0 && (
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark">No report results</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Transactions results */}
+              <div className="p-4 bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark">
+                <h3 className="font-semibold text-foreground-light dark:text-foreground-dark mb-2">Transaction Matches</h3>
+                <div className="space-y-2">
+                  {recentTransactions.filter(tx => {
+                    const q = searchQuery.toLowerCase();
+                    const type = String(tx.type || '').toLowerCase();
+                    const hash = String(tx.partHash || tx.id || '').toLowerCase();
+                    return type.includes(q) || hash.includes(q);
+                  }).slice(0, 5).map(tx => (
+                    <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border border-border-light dark:border-border-dark">
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground-light dark:text-foreground-dark truncate">{tx.type || 'Transaction'}</p>
+                        <p className="text-xs text-subtle-light dark:text-subtle-dark truncate">{tx.partHash || tx.id}</p>
+                      </div>
+                      <button onClick={handlePartClick} className="text-sm text-primary hover:text-primary/80">View</button>
+                    </div>
+                  ))}
+                  {recentTransactions.filter(tx => {
+                    const q = searchQuery.toLowerCase();
+                    const type = String(tx.type || '').toLowerCase();
+                    const hash = String(tx.partHash || tx.id || '').toLowerCase();
+                    return type.includes(q) || hash.includes(q);
+                  }).length === 0 && (
+                    <p className="text-sm text-subtle-light dark:text-subtle-dark">No transaction results</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Top Stats with micro-visualizations */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
             {/* Total Parts with sparkline */}
