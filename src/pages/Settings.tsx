@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Settings as SettingsIcon, User, Bell, Shield, Globe, Save, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SettingsState {
   profile: {
     name: string;
     email: string;
     phone: string;
-    division: string;
-    section: string;
+    division?: string;
+    section?: string;
+    category?: string;
+    products?: string[];
   };
   notifications: {
     emailNotifications: boolean;
@@ -33,15 +36,21 @@ interface SettingsState {
 }
 
 const Settings: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [settings, setSettings] = useState<SettingsState>({
     profile: {
-      name: 'Admin User',
-      email: 'admin@railway.gov.in',
+      name: user?.role === 'manufacturer' ? 'Steel Works India Ltd.' : 'Admin User',
+      email: user?.role === 'manufacturer' ? 'contact@steelworks.in' : 'admin@railway.gov.in',
       phone: '+91 98765 43210',
-      division: 'Central Railway',
-      section: 'Mumbai Division'
+      ...(user?.role === 'manufacturer' ? {
+        category: 'Rail Components',
+        products: ['Heavy Duty Rail Joints', 'Track Bolts', 'Rail Clips']
+      } : {
+        division: 'Central Railway',
+        section: 'Mumbai Division'
+      })
     },
     notifications: {
       emailNotifications: true,
@@ -76,8 +85,8 @@ const Settings: React.FC = () => {
   // Filter tabs based on user role
   const filteredTabs = tabs.filter(tab => {
     if (tab.id === 'security') {
-      // Security tab only available for admin
-      return settings.profile.section.includes('Admin'); // Assuming admin users have 'Admin' in their section
+      // Security tab only available for administrators
+      return user?.role === 'admin';
     }
     return true;
   });
@@ -129,34 +138,108 @@ const Settings: React.FC = () => {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Division</label>
-                <select
-                  value={settings.profile.division}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    profile: { ...settings.profile, division: e.target.value }
-                  })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="Central Railway">Central Railway</option>
-                  <option value="Western Railway">Western Railway</option>
-                  <option value="Northern Railway">Northern Railway</option>
-                  <option value="Southern Railway">Southern Railway</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Section</label>
-                <input
-                  type="text"
-                  value={settings.profile.section}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    profile: { ...settings.profile, section: e.target.value }
-                  })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
+              {user?.role === 'manufacturer' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product Category</label>
+                    <select
+                      value={settings.profile.category || ''}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        profile: { ...settings.profile, category: e.target.value }
+                      })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="Rail Components">Rail Components</option>
+                      <option value="Signaling Equipment">Signaling Equipment</option>
+                      <option value="Fastening Systems">Fastening Systems</option>
+                      <option value="Track Components">Track Components</option>
+                      <option value="Safety Equipment">Safety Equipment</option>
+                      <option value="Electrical Components">Electrical Components</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Products Manufactured</label>
+                    <div className="space-y-2">
+                      {(settings.profile.products || []).map((product, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={product}
+                            onChange={(e) => {
+                              const newProducts = [...(settings.profile.products || [])];
+                              newProducts[index] = e.target.value;
+                              setSettings({
+                                ...settings,
+                                profile: { ...settings.profile, products: newProducts }
+                              });
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            placeholder="Product name"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newProducts = (settings.profile.products || []).filter((_, i) => i !== index);
+                              setSettings({
+                                ...settings,
+                                profile: { ...settings.profile, products: newProducts }
+                              });
+                            }}
+                            className="text-red-600 hover:text-red-800 px-2"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newProducts = [...(settings.profile.products || []), ''];
+                          setSettings({
+                            ...settings,
+                            profile: { ...settings.profile, products: newProducts }
+                          });
+                        }}
+                        className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-800"
+                      >
+                        + Add Product
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Division</label>
+                    <select
+                      value={settings.profile.division || ''}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        profile: { ...settings.profile, division: e.target.value }
+                      })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="Central Railway">Central Railway</option>
+                      <option value="Western Railway">Western Railway</option>
+                      <option value="Northern Railway">Northern Railway</option>
+                      <option value="Southern Railway">Southern Railway</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Section</label>
+                    <input
+                      type="text"
+                      value={settings.profile.section || ''}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        profile: { ...settings.profile, section: e.target.value }
+                      })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <div className="pt-4 border-t">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Change Password</h3>

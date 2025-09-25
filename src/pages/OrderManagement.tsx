@@ -195,6 +195,63 @@ const OrderManagement: React.FC = () => {
         </p>
       </div>
 
+      {/* Statistics */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6">
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Orders</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{orders.length}</p>
+            </div>
+            <Package className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Pending</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {orders.filter(o => o.status === 'pending').length}
+              </p>
+            </div>
+            <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Dispatched</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {orders.filter(o => o.status === 'dispatched').length}
+              </p>
+            </div>
+            <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Delivered</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {orders.filter(o => o.status === 'delivered').length}
+              </p>
+            </div>
+            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                ₹{(orders.reduce((sum, order) => sum + order.totalValue, 0) / 10000000).toFixed(1)}Cr
+              </p>
+            </div>
+            <Package className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+          </div>
+        </div>
+      </div>
+
       {/* Controls */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -441,62 +498,7 @@ const OrderManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Statistics */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Orders</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{orders.length}</p>
-            </div>
-            <Package className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Pending</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {orders.filter(o => o.status === 'pending').length}
-              </p>
-            </div>
-            <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Dispatched</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {orders.filter(o => o.status === 'dispatched').length}
-              </p>
-            </div>
-            <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Delivered</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {orders.filter(o => o.status === 'delivered').length}
-              </p>
-            </div>
-            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                ₹{(orders.reduce((sum, order) => sum + order.totalValue, 0) / 10000000).toFixed(1)}Cr
-              </p>
-            </div>
-            <Package className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 };

@@ -208,10 +208,10 @@ const Dashboard: React.FC = () => {
           ))}
           
           {user.role === 'drm' && [
-            { action: 'Approval processed', item: 'High-value product request', time: '1 hour ago' },
-            { action: 'Division report generated', item: 'Monthly inspection summary', time: '3 hours ago' },
-            { action: 'User added', item: 'New Sr. DEN account', time: '5 hours ago' },
-            { action: 'AI analysis completed', item: 'Manufacturer performance rating', time: '7 hours ago' },
+            { action: 'Division report generated', item: 'Monthly inspection summary', time: '1 hour ago' },
+            { action: 'User added', item: 'New Sr. DEN account', time: '3 hours ago' },
+            { action: 'AI analysis completed', item: 'Manufacturer performance rating', time: '5 hours ago' },
+            { action: 'System monitoring', item: 'Division performance metrics updated', time: '7 hours ago' },
           ].map((activity, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>

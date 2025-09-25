@@ -16,7 +16,6 @@ interface InspectionLog {
   findings: string;
   recommendations: string;
   images: string[];
-  blockchainHash: string;
   priority: 'low' | 'medium' | 'high';
   followUpRequired: boolean;
   nextInspectionDue?: Date;
@@ -52,7 +51,6 @@ const InspectionLogs: React.FC = () => {
           findings: 'Rail joint in excellent condition. No visible wear, cracks, or deformation. All bolts properly tightened to specification. Joint alignment is within acceptable tolerances.',
           recommendations: 'Continue regular monitoring. Next inspection scheduled in 6 months. Apply protective coating during next maintenance window.',
           images: ['joint_overview.jpg', 'bolt_detail.jpg', 'alignment_check.jpg'],
-          blockchainHash: '0x123abc456def789ghi012jkl345mno678pqr901stu234vwx567yza890bcd',
           priority: 'low',
           followUpRequired: false,
           nextInspectionDue: new Date('2024-07-22')
@@ -70,7 +68,6 @@ const InspectionLogs: React.FC = () => {
           findings: 'Signal box housing shows minor corrosion on external panels. Internal components functioning normally. LED indicators operational. Communication systems tested and working.',
           recommendations: 'Schedule maintenance to address corrosion. Replace external housing panels. Apply anti-corrosion treatment. Test again after maintenance.',
           images: ['signal_box_exterior.jpg', 'corrosion_detail.jpg'],
-          blockchainHash: '0x456def789abc123ghi456jkl789mno012pqr345stu678vwx901yza234bcd',
           priority: 'medium',
           followUpRequired: true,
           nextInspectionDue: new Date('2024-02-15')
@@ -88,7 +85,6 @@ const InspectionLogs: React.FC = () => {
           findings: 'Multiple track bolts showing signs of fatigue and stress fractures. Torque values below specification. Some bolts have visible cracks and require immediate replacement.',
           recommendations: 'URGENT: Replace all affected bolts immediately. Conduct stress analysis of surrounding area. Implement enhanced monitoring protocol. Review installation procedures.',
           images: ['bolt_fracture.jpg', 'stress_analysis.jpg', 'torque_readings.jpg'],
-          blockchainHash: '0x789abc123def456ghi789jkl012mno345pqr678stu901vwx234yza567bcd',
           priority: 'high',
           followUpRequired: true,
           nextInspectionDue: new Date('2024-01-25')
@@ -106,7 +102,6 @@ const InspectionLogs: React.FC = () => {
           findings: 'Concrete sleepers in good condition. No visible cracks, spalling, or structural damage. Prestressing cables intact. Proper rail seat condition maintained.',
           recommendations: 'Continue current maintenance schedule. Monitor for any signs of deterioration. Check drainage around sleeper area during monsoon season.',
           images: ['sleeper_overview.jpg', 'rail_seat_detail.jpg'],
-          blockchainHash: '0x012jkl345mno678pqr901stu234vwx567yza890bcd123abc456def789ghi',
           priority: 'low',
           followUpRequired: false,
           nextInspectionDue: new Date('2024-04-19')
@@ -124,7 +119,6 @@ const InspectionLogs: React.FC = () => {
           findings: 'Inspection in progress. Initial assessment shows normal operation. Detailed analysis of switching mechanism underway.',
           recommendations: 'Awaiting completion of mechanical and electrical tests. Full report to be submitted within 24 hours.',
           images: [],
-          blockchainHash: '0x345mno678pqr901stu234vwx567yza890bcd123abc456def789ghi012jkl',
           priority: 'medium',
           followUpRequired: false
         }
@@ -240,6 +234,52 @@ const InspectionLogs: React.FC = () => {
         </div>
       </div>
 
+      {/* Statistics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Logs</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{logs.length}</p>
+            </div>
+            <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Passed</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {logs.filter(l => l.status === 'passed').length}
+              </p>
+            </div>
+            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Failed</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {logs.filter(l => l.status === 'failed').length}
+              </p>
+            </div>
+            <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Follow-up Required</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {logs.filter(l => l.followUpRequired).length}
+              </p>
+            </div>
+            <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
+          </div>
+        </div>
+      </div>
+
       {/* Logs Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 mb-6">
         {filteredLogs.map((log) => (
@@ -328,10 +368,6 @@ const InspectionLogs: React.FC = () => {
                       <span className="text-xs text-gray-600 dark:text-gray-400">{log.images.length} images</span>
                     </div>
                   )}
-                  <div className="flex items-center space-x-1">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-xs text-green-600 dark:text-green-400">Blockchain verified</span>
-                  </div>
                 </div>
                 <Eye className="h-4 w-4 text-primary-600" />
               </div>
@@ -441,69 +477,10 @@ const InspectionLogs: React.FC = () => {
                   )}
                 </div>
               )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Blockchain Hash</label>
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <p className="text-sm font-mono text-green-800 dark:text-green-200 break-all">
-                      {selectedLog.blockchainHash}
-                    </p>
-                  </div>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">Verified on Ethereum blockchain</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Statistics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Logs</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{logs.length}</p>
-            </div>
-            <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Passed</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {logs.filter(l => l.status === 'passed').length}
-              </p>
-            </div>
-            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Failed</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {logs.filter(l => l.status === 'failed').length}
-              </p>
-            </div>
-            <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Follow-up Required</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {logs.filter(l => l.followUpRequired).length}
-              </p>
-            </div>
-            <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

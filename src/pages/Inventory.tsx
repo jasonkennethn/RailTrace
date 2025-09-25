@@ -197,13 +197,6 @@ const Inventory: React.FC = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400">Manufactured</p>
                 <p className="font-medium text-gray-900 dark:text-white">{product.manufacturedDate.toLocaleDateString()}</p>
               </div>
-
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Blockchain Hash</p>
-                <p className="text-xs font-mono text-blue-600 dark:text-blue-400 break-all">
-                  {product.blockchainHash.substring(0, 20)}...
-                </p>
-              </div>
             </div>
 
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">

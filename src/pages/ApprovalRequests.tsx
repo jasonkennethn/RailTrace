@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, AlertTriangle, DollarSign, FileText, User, Calendar } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertTriangle, DollarSign, FileText, User, Calendar, Star, TrendingUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ApprovalRequestsService } from '../services/dataService';
 
@@ -15,6 +15,14 @@ interface ApprovalRequest {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: Date;
   documents?: string[];
+  category?: string;
+  productType?: string;
+  manufacturer?: string;
+  manufacturerRating?: number;
+  qualityScore?: number;
+  deliveryScore?: number;
+  costScore?: number;
+  overallScore?: number;
 }
 
 const ApprovalRequests: React.FC = () => {
@@ -22,6 +30,9 @@ const ApprovalRequests: React.FC = () => {
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [manufacturerFilter, setManufacturerFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('rating');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,9 +67,28 @@ const ApprovalRequests: React.FC = () => {
     setSelectedRequest(null);
   };
 
-  const filteredRequests = requests.filter(req => 
-    filter === 'all' || req.status === filter
-  );
+  const filteredRequests = requests.filter(req => {
+    const matchesStatus = filter === 'all' || req.status === filter;
+    const matchesCategory = categoryFilter === 'all' || req.category === categoryFilter;
+    const matchesManufacturer = manufacturerFilter === 'all' || req.manufacturer === manufacturerFilter;
+    return matchesStatus && matchesCategory && matchesManufacturer;
+  }).sort((a, b) => {
+    // Sort by selected criteria (higher ratings/scores first)
+    switch (sortBy) {
+      case 'rating':
+        return (b.manufacturerRating || 0) - (a.manufacturerRating || 0);
+      case 'quality':
+        return (b.qualityScore || 0) - (a.qualityScore || 0);
+      case 'delivery':
+        return (b.deliveryScore || 0) - (a.deliveryScore || 0);
+      case 'cost':
+        return (b.costScore || 0) - (a.costScore || 0);
+      case 'overall':
+        return (b.overallScore || 0) - (a.overallScore || 0);
+      default:
+        return (b.manufacturerRating || 0) - (a.manufacturerRating || 0);
+    }
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -97,23 +127,87 @@ const ApprovalRequests: React.FC = () => {
 
       {/* Filter Tabs */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
-        <div className="flex space-x-4">
-          {['all', 'pending', 'approved', 'rejected'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilter(status as any)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === status
-                  ? 'bg-blue-800 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Status Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <div className="flex flex-wrap gap-2">
+              {['all', 'pending', 'approved', 'rejected'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status as any)}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    filter === status
+                      ? 'bg-blue-800 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  <span className="ml-1 text-xs">
+                    ({status === 'all' ? requests.length : requests.filter(r => r.status === status).length})
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category/Product Type</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-              <span className="ml-2 text-sm">
-                ({status === 'all' ? requests.length : requests.filter(r => r.status === status).length})
-              </span>
-            </button>
-          ))}
+              <option value="all">All Categories</option>
+              <option value="Rail Joints">Rail Joints</option>
+              <option value="Track Bolts">Track Bolts</option>
+              <option value="Sleepers">Sleepers</option>
+              <option value="Signal Equipment">Signal Equipment</option>
+              <option value="Safety Equipment">Safety Equipment</option>
+              <option value="Maintenance Tools">Maintenance Tools</option>
+            </select>
+          </div>
+
+          {/* Manufacturer Filter with AI Ratings */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Star className="h-4 w-4 inline mr-1 text-yellow-500" />
+              Manufacturer (AI Rated)
+            </label>
+            <select
+              value={manufacturerFilter}
+              onChange={(e) => setManufacturerFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="all">All Manufacturers</option>
+              <option value="Steel Works India Ltd.">🌟 Steel Works India Ltd. (4.8⭐)</option>
+              <option value="Indian Rail Manufacturing">🌟 Indian Rail Manufacturing (4.6⭐)</option>
+              <option value="Bharat Heavy Electricals">🌟 Bharat Heavy Electricals (4.5⭐)</option>
+              <option value="Kalindee Rail Nirman">⭐ Kalindee Rail Nirman (4.3⭐)</option>
+              <option value="Railway Components Corp.">⭐ Railway Components Corp. (4.2⭐)</option>
+              <option value="Texmaco Rail & Engineering">⚡ Texmaco Rail & Engineering (3.9⭐)</option>
+            </select>
+          </div>
+
+          {/* Sort by AI Metrics */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <TrendingUp className="h-4 w-4 inline mr-1 text-blue-500" />
+              Sort by AI Metrics
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="rating">Overall Rating</option>
+              <option value="quality">Quality Score</option>
+              <option value="delivery">Delivery Performance</option>
+              <option value="cost">Cost Efficiency</option>
+              <option value="overall">Overall Performance</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -157,6 +251,12 @@ const ApprovalRequests: React.FC = () => {
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <DollarSign className="h-4 w-4" />
                   <span>₹{(request.amount / 100000).toFixed(1)}L</span>
+                </div>
+              )}
+              {request.manufacturer && request.manufacturerRating && (
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span>{request.manufacturer} ({request.manufacturerRating.toFixed(1)}⭐)</span>
                 </div>
               )}
             </div>
@@ -224,6 +324,26 @@ const ApprovalRequests: React.FC = () => {
                     {selectedRequest.status.toUpperCase()}
                   </span>
                 </div>
+                {selectedRequest.category && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <p className="text-gray-900">{selectedRequest.category}</p>
+                  </div>
+                )}
+                {selectedRequest.manufacturer && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-gray-900">{selectedRequest.manufacturer}</p>
+                      {selectedRequest.manufacturerRating && (
+                        <div className="flex items-center space-x-1 text-yellow-500">
+                          <Star className="h-4 w-4" />
+                          <span className="text-sm font-medium">{selectedRequest.manufacturerRating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Requested By</label>
                   <p className="text-gray-900">{selectedRequest.requestedBy} ({selectedRequest.requestedByRole})</p>
@@ -252,6 +372,45 @@ const ApprovalRequests: React.FC = () => {
                   <p className="text-gray-900">{selectedRequest.description}</p>
                 </div>
               </div>
+
+              {/* AI Manufacturer Metrics */}
+              {selectedRequest.manufacturerRating && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <TrendingUp className="h-4 w-4 inline mr-1 text-blue-500" />
+                    AI Manufacturer Performance Metrics
+                  </label>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center space-x-1 mb-1">
+                          <Star className="h-4 w-4 text-yellow-500" />
+                          <span className="text-lg font-bold text-gray-900">{selectedRequest.manufacturerRating.toFixed(1)}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Overall Rating</p>
+                      </div>
+                      {selectedRequest.qualityScore && (
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-green-600">{selectedRequest.qualityScore.toFixed(1)}</div>
+                          <p className="text-xs text-gray-600">Quality</p>
+                        </div>
+                      )}
+                      {selectedRequest.deliveryScore && (
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-blue-600">{selectedRequest.deliveryScore.toFixed(1)}</div>
+                          <p className="text-xs text-gray-600">Delivery</p>
+                        </div>
+                      )}
+                      {selectedRequest.costScore && (
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-purple-600">{selectedRequest.costScore.toFixed(1)}</div>
+                          <p className="text-xs text-gray-600">Cost Efficiency</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {selectedRequest.documents && selectedRequest.documents.length > 0 && (
                 <div>
@@ -289,52 +448,6 @@ const ApprovalRequests: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Requests</p>
-              <p className="text-2xl font-bold text-gray-900">{requests.length}</p>
-            </div>
-            <FileText className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {requests.filter(r => r.status === 'pending').length}
-              </p>
-            </div>
-            <Clock className="h-8 w-8 text-yellow-600" />
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Approved</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {requests.filter(r => r.status === 'approved').length}
-              </p>
-            </div>
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Rejected</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {requests.filter(r => r.status === 'rejected').length}
-              </p>
-            </div>
-            <XCircle className="h-8 w-8 text-red-600" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Edit, Save, X, QrCode, Calendar, MapPin, Factory, Hash, Barcode } from 'lucide-react';
+import { Package, Edit, Save, X, QrCode, Calendar, MapPin, Factory, Barcode } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import clsx from 'clsx';
 
@@ -11,7 +11,6 @@ interface ProductDetail {
   batchNumber: string;
   qrCode: string;
   barcode: string;
-  blockchainHash: string;
   manufacturedDate: Date;
   specifications: {
     material: string;
@@ -52,7 +51,6 @@ const ProductDetails: React.FC = () => {
           batchNumber: 'BATCH2024-001',
           qrCode: 'QR-RJ456-2024',
           barcode: '1234567890123',
-          blockchainHash: '0x123abc456def789ghi012jkl345mno678pqr901stu234vwx567yza890bcd',
           manufacturedDate: new Date('2024-01-15'),
           specifications: {
             material: 'High Carbon Steel',
@@ -75,7 +73,6 @@ const ProductDetails: React.FC = () => {
           batchNumber: 'BATCH2024-002',
           qrCode: 'QR-SB789-2024',
           barcode: '2345678901234',
-          blockchainHash: '0x456def789abc123ghi456jkl789mno012pqr345stu678vwx901yza234bcd',
           manufacturedDate: new Date('2024-01-10'),
           specifications: {
             material: 'Aluminum Alloy Housing',
@@ -98,7 +95,6 @@ const ProductDetails: React.FC = () => {
           batchNumber: 'BATCH2024-003',
           qrCode: 'QR-TB321-2024',
           barcode: '3456789012345',
-          blockchainHash: '0x789abc123def456ghi789jkl012mno345pqr678stu901vwx234yza567bcd',
           manufacturedDate: new Date('2024-01-12'),
           specifications: {
             material: 'Alloy Steel',
@@ -308,16 +304,6 @@ const ProductDetails: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <Barcode className="h-4 w-4 text-gray-400" />
                       <p className="text-gray-900 dark:text-white font-mono">{selectedProduct.barcode}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Blockchain Hash</label>
-                    <div className="flex items-center space-x-2">
-                      <Hash className="h-4 w-4 text-gray-400" />
-                      <p className="text-gray-900 dark:text-white font-mono text-xs break-all">
-                        {selectedProduct.blockchainHash}
-                      </p>
                     </div>
                   </div>
 

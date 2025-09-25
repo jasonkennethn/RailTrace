@@ -26,7 +26,7 @@ const ScanProduct: React.FC = () => {
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Scan Product</h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Scan QR codes or barcodes to verify products on the blockchain
+          Scan QR codes or barcodes to verify product authenticity
         </p>
       </div>
 
@@ -46,7 +46,7 @@ const ScanProduct: React.FC = () => {
               <div>
                 <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                 <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">Scan Complete!</p>
-                <p className="text-gray-600 dark:text-gray-400">Product verified on blockchain</p>
+                <p className="text-gray-600 dark:text-gray-400">Product verified successfully</p>
               </div>
             ) : (
               <div>
@@ -85,10 +85,10 @@ const ScanProduct: React.FC = () => {
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium text-green-800 dark:text-green-200">Blockchain Verified</span>
+                  <span className="font-medium text-green-800 dark:text-green-200">Product Verified</span>
                 </div>
                 <p className="text-sm text-green-700 dark:text-green-300">
-                  Product authenticity confirmed on Ethereum blockchain
+                  Product authenticity and details confirmed
                 </p>
               </div>
 
@@ -126,9 +126,9 @@ const ScanProduct: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Blockchain Hash</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Record ID</label>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 font-mono break-all">
-                    0x123abc456def789ghi012jkl345mno678pqr901stu234vwx567yza890bcd
+                    REC-RJ456-{Date.now().toString().slice(-8)}
                   </p>
                 </div>
               </div>
@@ -137,17 +137,17 @@ const ScanProduct: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Lifecycle History</h3>
                 <div className="space-y-3">
                   {[
-                    { status: 'Manufactured', date: 'Jan 15, 2024', hash: '0x123...abc' },
-                    { status: 'Quality Checked', date: 'Jan 16, 2024', hash: '0x456...def' },
-                    { status: 'Dispatched', date: 'Jan 20, 2024', hash: '0x789...ghi' },
-                    { status: 'Installed', date: 'Jan 25, 2024', hash: '0x012...jkl' },
+                    { status: 'Manufactured', date: 'Jan 15, 2024', id: 'MFG-001' },
+                    { status: 'Quality Checked', date: 'Jan 16, 2024', id: 'QC-002' },
+                    { status: 'Dispatched', date: 'Jan 20, 2024', id: 'DIS-003' },
+                    { status: 'Installed', date: 'Jan 25, 2024', id: 'INS-004' },
                   ].map((event, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">{event.status}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{event.date}</p>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-500 font-mono">{event.hash}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-500 font-mono">{event.id}</span>
                     </div>
                   ))}
                 </div>

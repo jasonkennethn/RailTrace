@@ -469,52 +469,6 @@ const AssignTasks: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Statistics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Tasks</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{tasks.length}</p>
-            </div>
-            <UserPlus className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">In Progress</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {tasks.filter(t => t.status === 'in_progress').length}
-              </p>
-            </div>
-            <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {tasks.filter(t => t.status === 'completed').length}
-              </p>
-            </div>
-            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Overdue</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {tasks.filter(t => t.status === 'overdue').length}
-              </p>
-            </div>
-            <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

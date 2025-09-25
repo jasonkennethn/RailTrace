@@ -197,6 +197,22 @@ const RequestProducts: React.FC = () => {
         </p>
       </div>
 
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 shadow-sm text-center">
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            {submittedRequests.length}
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">Total Requests</div>
+        </div>
+        <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 shadow-sm text-center">
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            {submittedRequests.filter(r => r.status === 'pending').length}
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Request Form */}
         <div className="lg:col-span-2">
@@ -435,21 +451,7 @@ const RequestProducts: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Stats */}
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 shadow-sm text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {submittedRequests.length}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Requests</div>
-            </div>
-            <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-4 shadow-sm text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {submittedRequests.filter(r => r.status === 'pending').length}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

@@ -111,15 +111,11 @@ const RecordInspection: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate blockchain recording
+      // Simulate database recording
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Generate blockchain hash
-      const blockchainHash = '0x' + Math.random().toString(16).substr(2, 64);
-      
-      console.log('Inspection recorded on blockchain:', {
+      console.log('Inspection recorded:', {
         ...inspectionData,
-        blockchainHash,
         timestamp: new Date(),
         inspectorId: 'current_user_id'
       });
@@ -191,17 +187,17 @@ const RecordInspection: React.FC = () => {
               Inspection Recorded Successfully!
             </h2>
             <p className="text-gray-600 dark:text-gray-400">
-              Your inspection has been recorded on the blockchain and is now immutable.
+              Your inspection has been recorded successfully and is now saved in the system.
             </p>
           </div>
           
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-center space-x-2 mb-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="font-medium text-green-800 dark:text-green-200">Blockchain Verified</span>
+              <span className="font-medium text-green-800 dark:text-green-200">Successfully Recorded</span>
             </div>
             <p className="text-sm text-green-700 dark:text-green-300">
-              Transaction hash: 0x{Math.random().toString(16).substr(2, 16)}...
+              Record ID: INS-{Date.now().toString().slice(-8)}
             </p>
           </div>
 
@@ -223,7 +219,7 @@ const RecordInspection: React.FC = () => {
           Record Inspection
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Enter track condition, defects, and maintenance details - recorded on blockchain
+          Enter track condition, defects, and maintenance details
         </p>
       </div>
 
@@ -472,7 +468,7 @@ const RecordInspection: React.FC = () => {
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                This inspection will be recorded on the blockchain for immutable tracking
+                This inspection will be recorded securely in the system
               </span>
             </div>
             <button
@@ -483,7 +479,7 @@ const RecordInspection: React.FC = () => {
               {isSubmitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  <span>Recording on Blockchain...</span>
+                  <span>Recording Inspection...</span>
                 </>
               ) : (
                 <>

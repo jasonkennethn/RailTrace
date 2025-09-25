@@ -46,7 +46,7 @@ const InspectionHistory: React.FC = () => {
         findings: inspection.notes,
         recommendations: inspection.status === 'failed' ? 'Immediate attention required' : 'Continue monitoring',
         inspectorName: inspection.inspectorName,
-        blockchainHash: inspection.blockchainHash || '',
+        blockchainHash: inspection.blockchainHash || 'HASH_' + inspection.id,
         images: inspection.images || [],
         defects: inspection.status === 'failed' ? ['Identified issues'] : [],
         maintenancePerformed: ['Inspection completed'],
@@ -222,7 +222,7 @@ const InspectionHistory: React.FC = () => {
           Inspection History
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          View previous inspections for assigned sections - blockchain verified
+          View previous inspections for assigned sections
         </p>
       </div>
 

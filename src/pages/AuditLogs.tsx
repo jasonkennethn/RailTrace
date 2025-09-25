@@ -88,15 +88,14 @@ const AuditLogs: React.FC = () => {
 
   const exportLogs = () => {
     const csvContent = [
-      ['Timestamp', 'User', 'Action', 'Resource', 'Status', 'IP Address', 'Blockchain Hash'],
+      ['Timestamp', 'User', 'Action', 'Resource', 'Status', 'IP Address'],
       ...filteredLogs.map(log => [
         log.timestamp.toISOString(),
         log.userName,
         log.action,
         log.resource,
         log.status,
-        log.ipAddress,
-        log.blockchainHash || 'N/A'
+        log.ipAddress
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -112,7 +111,7 @@ const AuditLogs: React.FC = () => {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Audit Logs</h1>
-        <p className="text-gray-600 dark:text-gray-400">Monitor system activities and blockchain transactions</p>
+        <p className="text-gray-600 dark:text-gray-400">Monitor system activities and security events</p>
       </div>
 
       {/* Filters */}
