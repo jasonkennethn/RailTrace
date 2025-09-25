@@ -1,0 +1,20 @@
+{
+  "name": "product-manager-server",
+  "private": true,
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node scripts/deploy.js",
+    "compile-abi": "node scripts/compile.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.4",
+    "express": "^4.19.2",
+    "solc": "^0.8.26-fixed"
+  }
+}
+
+
