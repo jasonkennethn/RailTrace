@@ -5,6 +5,7 @@ import * as Icons from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getNavItemsForRole } from '../../config/navigation';
+import { NavItem } from '../../types';
 import clsx from 'clsx';
 
 const Sidebar: React.FC = () => {
@@ -71,7 +72,7 @@ const Sidebar: React.FC = () => {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {navItems.map((item) => (
+            {navItems.map((item: NavItem) => (
               <NavLink
                 key={item.path}
                 to={item.path}

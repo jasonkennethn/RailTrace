@@ -1,10 +1,41 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, User, Bell, Shield, Database, Globe, Save, Eye, EyeOff } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, Shield, Globe, Save, Eye, EyeOff } from 'lucide-react';
+
+interface SettingsState {
+  profile: {
+    name: string;
+    email: string;
+    phone: string;
+    division: string;
+    section: string;
+  };
+  notifications: {
+    emailNotifications: boolean;
+    smsNotifications: boolean;
+    pushNotifications: boolean;
+    inspectionAlerts: boolean;
+    systemUpdates: boolean;
+    securityAlerts: boolean;
+  };
+  security: {
+    twoFactorAuth: boolean;
+    sessionTimeout: string;
+    passwordExpiry: string;
+    loginAttempts: string;
+  };
+  system: {
+    language: string;
+    timezone: string;
+    dateFormat: string;
+    currency: string;
+    theme: string;
+  };
+}
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<SettingsState>({
     profile: {
       name: 'Admin User',
       email: 'admin@railway.gov.in',
@@ -32,12 +63,6 @@ const Settings: React.FC = () => {
       dateFormat: 'DD/MM/YYYY',
       currency: 'INR',
       theme: 'light'
-    },
-    blockchain: {
-      networkUrl: 'https://mainnet.infura.io/v3/your-project-id',
-      gasLimit: '21000',
-      gasPrice: '20',
-      confirmations: '3'
     }
   });
 
@@ -45,9 +70,17 @@ const Settings: React.FC = () => {
     { id: 'profile', name: 'Profile', icon: User },
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'security', name: 'Security', icon: Shield },
-    { id: 'system', name: 'System', icon: Globe },
-    { id: 'blockchain', name: 'Blockchain', icon: Database }
+    { id: 'system', name: 'System', icon: Globe }
   ];
+
+  // Filter tabs based on user role
+  const filteredTabs = tabs.filter(tab => {
+    if (tab.id === 'security') {
+      // Security tab only available for admin
+      return settings.profile.section.includes('Admin'); // Assuming admin users have 'Admin' in their section
+    }
+    return true;
+  });
 
   const handleSave = () => {
     // Save settings logic here
@@ -342,72 +375,6 @@ const Settings: React.FC = () => {
           </div>
         );
 
-      case 'blockchain':
-        return (
-          <div className="space-y-6">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-center space-x-2">
-                <Shield className="h-5 w-5 text-yellow-600" />
-                <p className="text-sm text-yellow-800">
-                  <strong>Warning:</strong> Changing blockchain settings may affect system functionality. Only modify if you understand the implications.
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Network URL</label>
-                <input
-                  type="url"
-                  value={settings.blockchain.networkUrl}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    blockchain: { ...settings.blockchain, networkUrl: e.target.value }
-                  })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gas Limit</label>
-                  <input
-                    type="number"
-                    value={settings.blockchain.gasLimit}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      blockchain: { ...settings.blockchain, gasLimit: e.target.value }
-                    })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gas Price (Gwei)</label>
-                  <input
-                    type="number"
-                    value={settings.blockchain.gasPrice}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      blockchain: { ...settings.blockchain, gasPrice: e.target.value }
-                    })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirmations</label>
-                  <input
-                    type="number"
-                    value={settings.blockchain.confirmations}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      blockchain: { ...settings.blockchain, confirmations: e.target.value }
-                    })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
       default:
         return null;
     }
@@ -424,7 +391,7 @@ const Settings: React.FC = () => {
         {/* Settings Navigation */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           <nav className="space-y-2">
-            {tabs.map((tab) => {
+            {filteredTabs.map((tab) => {
               const IconComponent = tab.icon;
               return (
                 <button

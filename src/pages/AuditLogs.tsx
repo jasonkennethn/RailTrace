@@ -208,6 +208,41 @@ const AuditLogs: React.FC = () => {
         </div>
       </div>
 
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Logs</p>
+              <p className="text-2xl font-bold text-gray-900">{auditLogs.length}</p>
+            </div>
+            <FileCheck className="h-8 w-8 text-blue-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Successful Actions</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {auditLogs.filter(log => log.status === 'success').length}
+              </p>
+            </div>
+            <Shield className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Failed Actions</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {auditLogs.filter(log => log.status === 'failed').length}
+              </p>
+            </div>
+            <Shield className="h-8 w-8 text-red-600" />
+          </div>
+        </div>
+      </div>
+
       {/* Audit Logs Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -279,52 +314,6 @@ const AuditLogs: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Logs</p>
-              <p className="text-2xl font-bold text-gray-900">{auditLogs.length}</p>
-            </div>
-            <FileCheck className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Successful Actions</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {auditLogs.filter(log => log.status === 'success').length}
-              </p>
-            </div>
-            <Shield className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Failed Actions</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {auditLogs.filter(log => log.status === 'failed').length}
-              </p>
-            </div>
-            <Shield className="h-8 w-8 text-red-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Blockchain Records</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {auditLogs.filter(log => log.blockchainHash).length}
-              </p>
-            </div>
-            <Shield className="h-8 w-8 text-purple-600" />
-          </div>
         </div>
       </div>
     </div>

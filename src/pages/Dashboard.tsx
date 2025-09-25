@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import DashboardCard from '../components/ui/DashboardCard';
-import ChartContainer from '../components/charts/ChartContainer';
+import ChartContainer, { ChartType } from '../components/charts/ChartContainer';
 import { DashboardCard as CardType } from '../types';
 
 const Dashboard: React.FC = () => {
@@ -16,7 +16,6 @@ const Dashboard: React.FC = () => {
         return [
           { title: 'Total Users', value: '1,234', change: '+12%', changeType: 'positive', icon: 'Users' },
           { title: 'System Approvals', value: '856', change: '+5%', changeType: 'positive', icon: 'CheckCircle' },
-          { title: 'Blockchain Logs', value: '45,678', change: '+8%', changeType: 'positive', icon: 'Shield' },
           { title: 'AI Analytics Score', value: '94.2', change: '+2.1', changeType: 'positive', icon: 'Brain' },
         ];
       case 'drm':
@@ -45,7 +44,6 @@ const Dashboard: React.FC = () => {
           { title: 'Assigned Sections', value: '6', change: '+1', changeType: 'positive', icon: 'MapPin' },
           { title: 'Inspections Today', value: '8', change: '+2', changeType: 'positive', icon: 'CheckCircle' },
           { title: 'Products Scanned', value: '45', change: '+12', changeType: 'positive', icon: 'QrCode' },
-          { title: 'Blockchain Records', value: '156', change: '+8%', changeType: 'positive', icon: 'Shield' },
         ];
       case 'manufacturer':
         return [
@@ -62,7 +60,7 @@ const Dashboard: React.FC = () => {
   const getChartsForRole = () => {
     const baseCharts = [
       {
-        type: 'bar' as const,
+        type: 'bar',
         title: user.role === 'admin' ? 'System Activity' : 
                user.role === 'drm' ? 'Division Inspections' :
                user.role === 'sr_den' ? 'Project Progress' :
@@ -79,7 +77,7 @@ const Dashboard: React.FC = () => {
         ]
       },
       {
-        type: 'line' as const,
+        type: 'line',
         title: user.role === 'admin' ? 'System Performance' :
                user.role === 'drm' ? 'Division Performance' :
                user.role === 'sr_den' ? 'Sub-Division Efficiency' :
@@ -99,7 +97,7 @@ const Dashboard: React.FC = () => {
 
     if (user.role === 'admin' || user.role === 'drm') {
       baseCharts.push({
-        type: 'pie' as const,
+        type: 'pie',
         title: user.role === 'admin' ? 'User Distribution' : 'Division Status',
         data: [
           { name: 'Active', value: 65 },
@@ -150,7 +148,7 @@ const Dashboard: React.FC = () => {
         {charts.map((chart, index) => (
           <ChartContainer
             key={index}
-            type={chart.type}
+            type={chart.type as ChartType['type']}
             data={chart.data}
             title={chart.title}
             height={300}
@@ -226,7 +224,6 @@ const Dashboard: React.FC = () => {
             { action: 'Product scanned', item: 'Rail Joint RJ-456', time: '30 minutes ago' },
             { action: 'Inspection recorded', item: 'Track Section A-123', time: '2 hours ago' },
             { action: 'Product requested', item: 'Additional fasteners for Section B', time: '4 hours ago' },
-            { action: 'Blockchain verified', item: 'Inspection data recorded', time: '6 hours ago' },
           ].map((activity, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Users, Plus, Edit, Trash2, Search, Filter, UserCheck, UserX } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, Filter, UserCheck } from 'lucide-react';
 import { User, UserRole } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 const UserManagement: React.FC = () => {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([
     {
       id: '1',
@@ -75,10 +77,53 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Header Section with Statistics */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">User Management</h1>
-        <p className="text-gray-600 dark:text-gray-400">Manage system users and their permissions</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
+        <p className="text-gray-600">Manage system users and their permissions</p>
       </div>
+
+      {/* Statistics Cards - Moved to top for Administrator */}
+      {user?.role === 'admin' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Users</p>
+                <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Active Users</p>
+                <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+              </div>
+              <UserCheck className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Inspectors</p>
+                <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.role === 'inspector').length}</p>
+              </div>
+              <UserCheck className="h-8 w-8 text-purple-600" />
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Admins</p>
+                <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.role === 'admin').length}</p>
+              </div>
+              <UserCheck className="h-8 w-8 text-red-600" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header Actions */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm mb-6">
@@ -99,7 +144,7 @@ const UserManagement: React.FC = () => {
               <select
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as UserRole | 'all')}
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="all">All Roles</option>
                 {roles.map(role => (
@@ -149,9 +194,8 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                      {user.role.replace('_', ' ').toUpperCase()}
-                    </span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}
+                      >{user.role.replace('_', ' ').toUpperCase()}</span>
                   </td>
                   <td className="py-4 px-6">
                     <div>
@@ -190,50 +234,6 @@ const UserManagement: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{users.length}</p>
-            </div>
-            <Users className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Active Users</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{users.length}</p>
-            </div>
-            <UserCheck className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Inspectors</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {users.filter(u => u.role === 'inspector').length}
-              </p>
-            </div>
-            <UserCheck className="h-8 w-8 text-purple-600" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Admins</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {users.filter(u => u.role === 'admin').length}
-              </p>
-            </div>
-            <UserCheck className="h-8 w-8 text-red-600" />
-          </div>
         </div>
       </div>
     </div>

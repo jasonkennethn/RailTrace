@@ -130,18 +130,14 @@ const RecordInspection: React.FC = () => {
       setTimeout(() => {
         setShowSuccess(false);
         setInspectionData({
+          ...inspectionData,
           productId: '',
           productName: '',
           section: '',
-          inspectionType: 'routine',
-          condition: 'good',
-          defects: [],
-          maintenancePerformed: [],
           findings: '',
           recommendations: '',
           images: [],
           nextInspectionDate: new Date(),
-          priority: 'medium'
         });
       }, 3000);
 

@@ -10,6 +10,14 @@ interface ChartContainerProps {
   className?: string;
 }
 
+export interface ChartType {
+  type: 'bar' | 'line' | 'pie';
+  data: any[];
+  title: string;
+  height?: number;
+  className?: string;
+}
+
 const COLORS = ['#1e3a8a', '#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe'];
 
 const ChartContainer: React.FC<ChartContainerProps> = ({
@@ -64,9 +72,12 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
               cy="50%"
               outerRadius={80}
               dataKey="value"
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              label={({ name, percent }) => {
+                const value = typeof percent === 'number' ? percent : 0;
+                return `${name} ${(value * 100).toFixed(0)}%`;
+              }}
             >
-              {data.map((_, index) => (
+              {data.map((item, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
@@ -92,7 +103,9 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
     )}>
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={height}>
-        {renderChart()}
+        <React.Fragment>
+          {renderChart()}
+        </React.Fragment>
       </ResponsiveContainer>
     </div>
   );

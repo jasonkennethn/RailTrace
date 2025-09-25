@@ -5,14 +5,13 @@ export const navigationItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['admin'] },
   { label: 'User Management', path: '/users', icon: 'Users', roles: ['admin', 'drm'] },
   { label: 'Role Management', path: '/roles', icon: 'Shield', roles: ['admin'] },
+  { label: 'Settings', path: '/settings', icon: 'Cog', roles: ['admin'] },
   { label: 'Reports', path: '/reports', icon: 'FileSpreadsheet', roles: ['admin', 'drm', 'manufacturer'] },
   { label: 'Audit Logs', path: '/audit', icon: 'FileCheck', roles: ['admin'] },
-  { label: 'Settings', path: '/settings', icon: 'Cog', roles: ['admin', 'drm', 'sr_den', 'den', 'inspector', 'manufacturer'] },
   
   // DRM navigation
   { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['drm'] },
   { label: 'Division Reports', path: '/division-reports', icon: 'BarChart3', roles: ['drm'] },
-  { label: 'Approval Requests', path: '/approval-requests', icon: 'CheckCircle', roles: ['drm', 'sr_den', 'den'] },
   { label: 'Schedule & Notifications', path: '/schedule-notifications', icon: 'Calendar', roles: ['drm'] },
   
   // Sr. DEN navigation
@@ -40,6 +39,6 @@ export const navigationItems: NavItem[] = [
   { label: 'Product Details', path: '/product-details', icon: 'Settings', roles: ['manufacturer'] },
 ];
 
-export const getNavItemsForRole = (role: UserRole): NavItem[] => {
-  return navigationItems.filter(item => item.roles.includes(role));
+export const getNavItemsForRole = (userRole: UserRole): NavItem[] => {
+  return navigationItems.filter(item => item.roles.includes(userRole));
 };
