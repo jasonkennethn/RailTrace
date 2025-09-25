@@ -3,7 +3,7 @@ import { NavItem, UserRole } from '../types';
 export const navigationItems: NavItem[] = [
   // Administrator navigation
   { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['admin'] },
-  { label: 'User Management', path: '/users', icon: 'Users', roles: ['admin', 'drm'] },
+  { label: 'User Management', path: '/users', icon: 'Users', roles: ['admin'] },
   { label: 'Role Management', path: '/roles', icon: 'Shield', roles: ['admin'] },
   { label: 'Settings', path: '/settings', icon: 'Cog', roles: ['admin'] },
   { label: 'Reports', path: '/reports', icon: 'FileSpreadsheet', roles: ['admin', 'drm', 'manufacturer'] },
@@ -11,6 +11,7 @@ export const navigationItems: NavItem[] = [
   
   // DRM navigation
   { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['drm'] },
+  { label: 'User Management', path: '/users', icon: 'Users', roles: ['drm'] },
   { label: 'Division Reports', path: '/division-reports', icon: 'BarChart3', roles: ['drm'] },
   { label: 'Schedule & Notifications', path: '/schedule-notifications', icon: 'Calendar', roles: ['drm'] },
   
@@ -18,14 +19,16 @@ export const navigationItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['sr_den'] },
   { label: 'Sub-Division Reports', path: '/subdivision-reports', icon: 'TrendingUp', roles: ['sr_den'] },
   { label: 'Inspection Overview', path: '/inspection-overview', icon: 'Eye', roles: ['sr_den'] },
+  { label: 'Approval Requests', path: '/approval-requests', icon: 'CheckCircle', roles: ['sr_den'] },
   
   // DEN navigation
   { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['den'] },
   { label: 'Section Reports', path: '/section-reports', icon: 'BarChart3', roles: ['den'] },
   { label: 'Assign Tasks', path: '/assign-tasks', icon: 'UserPlus', roles: ['den'] },
   { label: 'Inspection Logs', path: '/inspection-logs', icon: 'FileText', roles: ['den'] },
+  { label: 'Approval Requests', path: '/approval-requests', icon: 'CheckCircle', roles: ['den'] },
   
-  // Inspector navigation
+  // Field Inspector navigation
   { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['inspector'] },
   { label: 'Scan Products', path: '/scan', icon: 'QrCode', roles: ['inspector'] },
   { label: 'Record Inspection', path: '/record-inspection', icon: 'Edit', roles: ['inspector'] },

@@ -37,11 +37,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Demo users for authentication when Firebase is not configured
   const demoUsers = [
-    { email: 'admin@railway.gov.in', password: 'admin123', name: 'Admin User', role: 'admin' as const },
+    { email: 'admin@railway.gov.in', password: 'admin123', name: 'Administrator', role: 'admin' as const },
     { email: 'drm@railway.gov.in', password: 'drm123', name: 'DRM User', role: 'drm' as const },
-    { email: 'inspector@railway.gov.in', password: 'inspector123', name: 'Inspector User', role: 'inspector' as const },
     { email: 'srden@railway.gov.in', password: 'srden123', name: 'Sr. DEN User', role: 'sr_den' as const },
     { email: 'den@railway.gov.in', password: 'den123', name: 'DEN User', role: 'den' as const },
+    { email: 'inspector@railway.gov.in', password: 'inspector123', name: 'Field Inspector', role: 'inspector' as const },
     { email: 'manufacturer@railway.gov.in', password: 'mfg123', name: 'Manufacturer User', role: 'manufacturer' as const },
   ];
 
