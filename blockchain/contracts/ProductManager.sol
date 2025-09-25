@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 contract ProductManager {
 	struct Product {
 		uint256 id;
-		
 		string name;
 		string category;
 		uint256 quantity;

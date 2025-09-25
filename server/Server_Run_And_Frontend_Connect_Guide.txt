@@ -1,0 +1,101 @@
+Server Run And Frontend Connect Guide
+
+Prerequisites
+- Node.js 18+ installed
+- BSC Testnet RPC URL and a funded testnet private key
+- Deployed ProductManager contract address
+
+1) Install and configure
+- Open terminal in the server folder
+  cd server
+- Install dependencies
+  npm install
+- Create a .env file in server/ with:
+  BSC_RPC_URL=<your_bsc_testnet_rpc_url>
+  PRIVATE_KEY=<your_private_key_without_0x>
+  CONTRACT_ADDRESS=<deployed_contract_address>
+  PORT=4000
+
+2) Run the server
+- Start:
+  npm start
+- Verify:
+  Open http://localhost:4000/getProducts
+  Expected: {"ok":true,"products":[]}
+
+3) API endpoints (base = http://localhost:4000)
+- POST /createProduct
+  Body JSON: { name, category, quantity, urgency, section, budget, requiredBy, justification }
+  Response: { ok: true, txHash: "0x..." }
+- POST /updateProduct
+  Body JSON: { id, status }
+  Response: { ok: true, txHash: "0x..." }
+- POST /approveProduct
+  Body JSON: { id }
+  Response: { ok: true, txHash: "0x..." }
+- GET /getProducts
+  Response: { ok: true, products: [...] }
+
+4) Connect from a frontend
+- In your frontend, set an environment variable for the API base URL.
+  Example (Vite): frontend/.env
+    VITE_API_BASE=http://localhost:4000
+
+- Minimal client functions (TypeScript example):
+  const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
+
+  export async function apiCreateProduct(payload) {
+    const res = await fetch(`${API_BASE}/createProduct`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    return res.json();
+  }
+
+  export async function apiUpdateProduct(payload) {
+    const res = await fetch(`${API_BASE}/updateProduct`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    return res.json();
+  }
+
+  export async function apiApproveProduct(payload) {
+    const res = await fetch(`${API_BASE}/approveProduct`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    return res.json();
+  }
+
+  export async function apiGetProducts() {
+    const res = await fetch(`${API_BASE}/getProducts`);
+    return res.json();
+  }
+
+- Example React usage:
+  import { useEffect, useState } from 'react';
+  import { apiGetProducts } from './services/blockchainApi';
+
+  export default function ProductsList() {
+    const [items, setItems] = useState([]);
+    useEffect(() => { (async () => {
+      const data = await apiGetProducts();
+      setItems(data.products || []);
+    })(); }, []);
+    return (
+      <ul>
+        {items.map(p => <li key={p.id}>{p.name} - {p.status}</li>)}
+      </ul>
+    );
+  }
+
+5) Deploying (Railway overview)
+- Push the server folder to a GitHub repo
+- Create Railway project and link the repo (root directory = server)
+- Set Variables in Railway:
+  BSC_RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS, PORT (e.g., 8080)
+- Railway will run npm install and npm start automatically
+- Use the Railway URL as the frontend API base (VITE_API_BASE)
+
+6) Troubleshooting
+- "Cannot GET /": Use /getProducts or POST endpoints
+- 500 error: Check server logs, verify .env values, ensure PRIVATE_KEY has test BNB
+- CORS: Server allows all origins by default; restrict if needed in index.js
