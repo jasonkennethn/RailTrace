@@ -1,75 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, Plus, Search, Filter, Edit, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Product } from '../types';
+import { ProductsService } from '../services/dataService';
 
 const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const products: Product[] = [
-    {
-      id: 'RAIL-JOINT-RJ456',
-      name: 'Heavy Duty Rail Joint',
-      category: 'Rail Components',
-      manufacturer: 'Steel Works India Ltd.',
-      batchNumber: 'BATCH2024-001',
-      qrCode: 'QR-RJ456-2024',
-      blockchainHash: '0x123abc456def789ghi012jkl345mno678pqr901stu234vwx567yza890bcd',
-      manufacturedDate: new Date('2024-01-15'),
-      status: 'installed',
-      location: 'Track Section A-123, Mumbai Division'
-    },
-    {
-      id: 'SIGNAL-BOX-SB789',
-      name: 'Digital Signal Control Box',
-      category: 'Signaling Equipment',
-      manufacturer: 'Railway Electronics Corp.',
-      batchNumber: 'BATCH2024-002',
-      qrCode: 'QR-SB789-2024',
-      blockchainHash: '0x456def789abc123ghi456jkl789mno012pqr345stu678vwx901yza234bcd',
-      manufacturedDate: new Date('2024-01-10'),
-      status: 'maintenance',
-      location: 'Signal Post SP-45, Delhi Division'
-    },
-    {
-      id: 'TRACK-BOLT-TB321',
-      name: 'High Tensile Track Bolt',
-      category: 'Fastening Systems',
-      manufacturer: 'Precision Fasteners Ltd.',
-      batchNumber: 'BATCH2024-003',
-      qrCode: 'QR-TB321-2024',
-      blockchainHash: '0x789abc123def456ghi789jkl012mno345pqr678stu901vwx234yza567bcd',
-      manufacturedDate: new Date('2024-01-12'),
-      status: 'dispatched',
-      location: 'In Transit to Chennai Division'
-    },
-    {
-      id: 'SLEEPER-SL654',
-      name: 'Prestressed Concrete Sleeper',
-      category: 'Track Components',
-      manufacturer: 'Concrete Solutions India',
-      batchNumber: 'BATCH2024-004',
-      qrCode: 'QR-SL654-2024',
-      blockchainHash: '0x012jkl345mno678pqr901stu234vwx567yza890bcd123abc456def789ghi',
-      manufacturedDate: new Date('2024-01-08'),
-      status: 'installed',
-      location: 'Track Section C-789, Kolkata Division'
-    },
-    {
-      id: 'SWITCH-SW987',
-      name: 'Automatic Track Switch',
-      category: 'Track Components',
-      manufacturer: 'Advanced Rail Systems',
-      batchNumber: 'BATCH2024-005',
-      qrCode: 'QR-SW987-2024',
-      blockchainHash: '0x345mno678pqr901stu234vwx567yza890bcd123abc456def789ghi012jkl',
-      manufacturedDate: new Date('2024-01-05'),
-      status: 'manufactured',
-      location: 'Warehouse - Mumbai'
-    }
-  ];
+  // Real-time data subscription
+  useEffect(() => {
+    const unsubscribe = ProductsService.subscribeToProducts((fetchedProducts) => {
+      setProducts(fetchedProducts);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const categories = ['Rail Components', 'Signaling Equipment', 'Fastening Systems', 'Track Components'];
 
@@ -118,11 +68,30 @@ const Inventory: React.FC = () => {
 
   const handleSave = () => {
     if (editingProduct) {
-      // Here you would typically update the product in your backend
-      console.log('Saving product:', editingProduct);
-      setEditingProduct(null);
+      // Update product using the ProductsService
+      ProductsService.updateProduct(editingProduct.id, editingProduct)
+        .then(() => {
+          console.log('Product updated successfully');
+          setEditingProduct(null);
+        })
+        .catch((error) => {
+          console.error('Error updating product:', error);
+        });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading inventory...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleCancel = () => {
     setEditingProduct(null);

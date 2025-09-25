@@ -27,14 +27,28 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
   height = 300,
   className = ''
 }) => {
-  const renderChart = () => {
+  // Debug logging
+  console.log('ChartContainer rendering:', { type, title, dataLength: data?.length, data });
+
+  const renderChart = (): React.ReactElement => {
+    if (!data || data.length === 0) {
+      return <div className="flex items-center justify-center h-full text-gray-500">No data available</div>;
+    }
+
     switch (type) {
       case 'bar':
         return (
-          <BarChart data={data}>
+          <BarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="name" />
-            <YAxis />
+            <XAxis 
+              dataKey="name" 
+              stroke="#6b7280"
+              fontSize={12}
+            />
+            <YAxis 
+              stroke="#6b7280"
+              fontSize={12}
+            />
             <Tooltip 
               contentStyle={{ 
                 backgroundColor: '#ffffff', 
@@ -48,10 +62,17 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
         );
       case 'line':
         return (
-          <LineChart data={data}>
+          <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="name" />
-            <YAxis />
+            <XAxis 
+              dataKey="name" 
+              stroke="#6b7280"
+              fontSize={12}
+            />
+            <YAxis 
+              stroke="#6b7280"
+              fontSize={12}
+            />
             <Tooltip 
               contentStyle={{ 
                 backgroundColor: '#ffffff', 
@@ -60,7 +81,14 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
               }} 
             />
-            <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={3} dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }} />
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke="#2563eb" 
+              strokeWidth={3} 
+              dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }} 
+              activeDot={{ r: 6 }}
+            />
           </LineChart>
         );
       case 'pie':
@@ -70,7 +98,9 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
               data={data}
               cx="50%"
               cy="50%"
-              outerRadius={80}
+              labelLine={false}
+              outerRadius={100}
+              fill="#8884d8"
               dataKey="value"
               label={({ name, percent }) => {
                 const value = typeof percent === 'number' ? percent : 0;
@@ -92,7 +122,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
           </PieChart>
         );
       default:
-        return null;
+        return <div className="flex items-center justify-center h-full text-gray-500">Chart type not supported</div>;
     }
   };
 
@@ -102,11 +132,11 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
       className
     )}>
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
-      <ResponsiveContainer width="100%" height={height}>
-        <React.Fragment>
+      <div style={{ width: '100%', height: height }}>
+        <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
-        </React.Fragment>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };

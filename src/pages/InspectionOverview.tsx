@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, CheckCircle, XCircle, Clock, MapPin, Camera, FileText, RefreshCw, Filter } from 'lucide-react';
 import { Inspection } from '../types';
+import { InspectionsService } from '../services/dataService';
 import { useTheme } from '../contexts/ThemeContext';
 import clsx from 'clsx';
 
@@ -12,70 +13,18 @@ const InspectionOverview: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadInspections();
+    // Real-time data subscription
+    const unsubscribe = InspectionsService.subscribeToInspections((fetchedInspections) => {
+      setInspections(fetchedInspections);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const loadInspections = async () => {
     setLoading(true);
-    try {
-      // Mock inspections data
-      const mockInspections: Inspection[] = [
-        {
-          id: 'INS-001',
-          productId: 'RAIL-JOINT-RJ456',
-          inspectorId: 'inspector_123',
-          inspectorName: 'Inspector John Smith',
-          date: new Date('2024-01-20T10:30:00'),
-          status: 'passed',
-          notes: 'Rail joint in excellent condition. No visible wear or damage. Bolts properly tightened.',
-          images: ['inspection1.jpg', 'inspection2.jpg'],
-          blockchainHash: '0x123abc456def789ghi012jkl345mno678pqr901stu234vwx567yza890bcd',
-          location: 'Track Section A-123, Mumbai Division'
-        },
-        {
-          id: 'INS-002',
-          productId: 'SIGNAL-BOX-SB789',
-          inspectorId: 'inspector_456',
-          inspectorName: 'Inspector Jane Doe',
-          date: new Date('2024-01-19T14:15:00'),
-          status: 'failed',
-          notes: 'Signal box showing signs of corrosion on external housing. Requires immediate maintenance.',
-          images: ['inspection3.jpg'],
-          blockchainHash: '0x456def789abc123ghi456jkl789mno012pqr345stu678vwx901yza234bcd',
-          location: 'Signal Post SP-45, Delhi Division'
-        },
-        {
-          id: 'INS-003',
-          productId: 'TRACK-BOLT-TB321',
-          inspectorId: 'inspector_789',
-          inspectorName: 'Inspector Mike Wilson',
-          date: new Date('2024-01-18T09:45:00'),
-          status: 'pending',
-          notes: 'Inspection in progress. Awaiting final measurements and documentation.',
-          images: [],
-          blockchainHash: '0x789abc123def456ghi789jkl012mno345pqr678stu901vwx234yza567bcd',
-          location: 'Track Section B-456, Chennai Division'
-        },
-        {
-          id: 'INS-004',
-          productId: 'SLEEPER-SL654',
-          inspectorId: 'inspector_101',
-          inspectorName: 'Inspector Sarah Brown',
-          date: new Date('2024-01-17T16:20:00'),
-          status: 'passed',
-          notes: 'Concrete sleeper in good condition. No cracks or structural damage observed.',
-          images: ['inspection4.jpg', 'inspection5.jpg', 'inspection6.jpg'],
-          blockchainHash: '0x012jkl345mno678pqr901stu234vwx567yza890bcd123abc456def789ghi',
-          location: 'Track Section C-789, Kolkata Division'
-        }
-      ];
-
-      setInspections(mockInspections);
-    } catch (error) {
-      console.error('Error loading inspections:', error);
-    } finally {
-      setLoading(false);
-    }
+    // Data will be loaded via the subscription
   };
 
   const filteredInspections = inspections.filter(inspection => 

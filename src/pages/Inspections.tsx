@@ -1,62 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Eye, CheckCircle, XCircle, Clock, MapPin, Camera, FileText } from 'lucide-react';
 import { Inspection } from '../types';
+import { InspectionsService } from '../services/dataService';
 
 const Inspections: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const inspections: Inspection[] = [
-    {
-      id: 'INS-001',
-      productId: 'RAIL-JOINT-RJ456',
-      inspectorId: 'inspector_123',
-      inspectorName: 'Inspector John Smith',
-      date: new Date('2024-01-20T10:30:00'),
-      status: 'passed',
-      notes: 'Rail joint in excellent condition. No visible wear or damage. Bolts properly tightened.',
-      images: ['inspection1.jpg', 'inspection2.jpg'],
-      blockchainHash: '0x123abc456def789ghi012jkl345mno678pqr901stu234vwx567yza890bcd',
-      location: 'Track Section A-123, Mumbai Division'
-    },
-    {
-      id: 'INS-002',
-      productId: 'SIGNAL-BOX-SB789',
-      inspectorId: 'inspector_456',
-      inspectorName: 'Inspector Jane Doe',
-      date: new Date('2024-01-19T14:15:00'),
-      status: 'failed',
-      notes: 'Signal box showing signs of corrosion on external housing. Requires immediate maintenance.',
-      images: ['inspection3.jpg'],
-      blockchainHash: '0x456def789abc123ghi456jkl789mno012pqr345stu678vwx901yza234bcd',
-      location: 'Signal Post SP-45, Delhi Division'
-    },
-    {
-      id: 'INS-003',
-      productId: 'TRACK-BOLT-TB321',
-      inspectorId: 'inspector_789',
-      inspectorName: 'Inspector Mike Wilson',
-      date: new Date('2024-01-18T09:45:00'),
-      status: 'pending',
-      notes: 'Inspection in progress. Awaiting final measurements and documentation.',
-      images: [],
-      blockchainHash: '0x789abc123def456ghi789jkl012mno345pqr678stu901vwx234yza567bcd',
-      location: 'Track Section B-456, Chennai Division'
-    },
-    {
-      id: 'INS-004',
-      productId: 'SLEEPER-SL654',
-      inspectorId: 'inspector_101',
-      inspectorName: 'Inspector Sarah Brown',
-      date: new Date('2024-01-17T16:20:00'),
-      status: 'passed',
-      notes: 'Concrete sleeper in good condition. No cracks or structural damage observed.',
-      images: ['inspection4.jpg', 'inspection5.jpg', 'inspection6.jpg'],
-      blockchainHash: '0x012jkl345mno678pqr901stu234vwx567yza890bcd123abc456def789ghi',
-      location: 'Track Section C-789, Kolkata Division'
-    }
-  ];
+  // Real-time data subscription
+  useEffect(() => {
+    const unsubscribe = InspectionsService.subscribeToInspections((fetchedInspections) => {
+      setInspections(fetchedInspections);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const filteredInspections = inspections.filter(inspection => {
     const matchesSearch = inspection.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,6 +28,19 @@ const Inspections: React.FC = () => {
     const matchesStatus = selectedStatus === 'all' || inspection.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading inspections...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {

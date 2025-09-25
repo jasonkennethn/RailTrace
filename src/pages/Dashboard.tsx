@@ -1,27 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import DashboardCard from '../components/ui/DashboardCard';
 import ChartContainer, { ChartType } from '../components/charts/ChartContainer';
 import { DashboardCard as CardType } from '../types';
+import { AnalyticsService } from '../services/dataService';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      AnalyticsService.getDashboardData(user.role)
+        .then((data) => {
+          setDashboardData(data);
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error fetching dashboard data:', error);
+          setLoading(false);
+        });
+    }
+  }, [user]);
 
   if (!user) return null;
 
-  // Role-specific dashboard data
+  if (loading) {
+    return (
+      <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Role-specific dashboard data with real-time counts
   const getCardsForRole = (): CardType[] => {
+    const baseData = dashboardData || { summary: { totalUsers: 0, activeUsers: 0, totalProducts: 0, totalInspections: 0 } };
+    
     switch (user.role) {
       case 'admin':
         return [
-          { title: 'Total Users', value: '1,234', change: '+12%', changeType: 'positive', icon: 'Users' },
-          { title: 'System Approvals', value: '856', change: '+5%', changeType: 'positive', icon: 'CheckCircle' },
+          { title: 'Total Users', value: baseData.summary.totalUsers.toString(), change: '+12%', changeType: 'positive', icon: 'Users' },
+          { title: 'System Approvals', value: baseData.summary.totalInspections.toString(), change: '+5%', changeType: 'positive', icon: 'CheckCircle' },
           { title: 'AI Analytics Score', value: '94.2', change: '+2.1', changeType: 'positive', icon: 'Brain' },
         ];
       case 'drm':
         return [
-          { title: 'Division Inspections', value: '234', change: '+7%', changeType: 'positive', icon: 'Search' },
-          { title: 'Pending Approvals', value: '12', change: '-3', changeType: 'negative', icon: 'Clock' },
+          { title: 'Division Inspections', value: baseData.summary.totalInspections.toString(), change: '+7%', changeType: 'positive', icon: 'Search' },
+          { title: 'Active Products', value: baseData.summary.totalProducts.toString(), change: '+3', changeType: 'positive', icon: 'Package' },
           { title: 'Product Performance', value: '92%', change: '+3%', changeType: 'positive', icon: 'TrendingUp' },
           { title: 'AI Manufacturer Rating', value: '88.5', change: '+1.2', changeType: 'positive', icon: 'Star' },
         ];
@@ -36,19 +68,19 @@ const Dashboard: React.FC = () => {
         return [
           { title: 'Section Approvals', value: '15', change: '+3', changeType: 'positive', icon: 'CheckCircle' },
           { title: 'Active Tasks', value: '28', change: '+5', changeType: 'positive', icon: 'UserPlus' },
-          { title: 'Inspection Logs', value: '142', change: '+12%', changeType: 'positive', icon: 'FileText' },
+          { title: 'Inspection Logs', value: baseData.summary.totalInspections.toString(), change: '+12%', changeType: 'positive', icon: 'FileText' },
           { title: 'Section Performance', value: '87%', change: '+2%', changeType: 'positive', icon: 'Activity' },
         ];
       case 'inspector':
         return [
           { title: 'Assigned Sections', value: '6', change: '+1', changeType: 'positive', icon: 'MapPin' },
           { title: 'Inspections Today', value: '8', change: '+2', changeType: 'positive', icon: 'CheckCircle' },
-          { title: 'Products Scanned', value: '45', change: '+12', changeType: 'positive', icon: 'QrCode' },
+          { title: 'Products Scanned', value: baseData.summary.totalProducts.toString(), change: '+12', changeType: 'positive', icon: 'QrCode' },
         ];
       case 'manufacturer':
         return [
           { title: 'Pending Orders', value: '23', change: '+4', changeType: 'positive', icon: 'ShoppingCart' },
-          { title: 'Products Delivered', value: '456', change: '+8%', changeType: 'positive', icon: 'Package' },
+          { title: 'Products Delivered', value: baseData.summary.totalProducts.toString(), change: '+8%', changeType: 'positive', icon: 'Package' },
           { title: 'AI Performance Score', value: '91.2', change: '+2.3', changeType: 'positive', icon: 'Star' },
           { title: 'Delivery Rate', value: '94%', change: '-1%', changeType: 'negative', icon: 'Truck' },
         ];

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Calendar, MapPin, CheckCircle, Clock, AlertTriangle, Plus, Search, Filter } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { TasksService } from '../services/dataService';
 import clsx from 'clsx';
 
 interface Task {
@@ -25,6 +26,7 @@ const AssignTasks: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [newTask, setNewTask] = useState<Partial<Task>>({
     title: '',
     description: '',
@@ -38,95 +40,27 @@ const AssignTasks: React.FC = () => {
   });
 
   useEffect(() => {
-    loadTasks();
+    // Real-time data subscription
+    const unsubscribe = TasksService.subscribeToTasks((fetchedTasks) => {
+      setTasks(fetchedTasks);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const loadTasks = async () => {
-    try {
-      // Mock tasks data
-      const mockTasks: Task[] = [
-        {
-          id: 'TASK-001',
-          title: 'Track Inspection - Section A-123',
-          description: 'Conduct comprehensive track inspection including rail condition, joint integrity, and fastener status',
-          type: 'inspection',
-          priority: 'high',
-          assignedTo: 'AEN Kumar',
-          assignedToRole: 'AEN',
-          section: 'Section A-123',
-          dueDate: new Date('2024-01-25'),
-          status: 'assigned',
-          createdDate: new Date('2024-01-20'),
-          estimatedHours: 6,
-          notes: 'Focus on high-traffic areas and recent maintenance zones'
-        },
-        {
-          id: 'TASK-002',
-          title: 'Rail Joint Replacement',
-          description: 'Replace worn rail joints in Section B-456 as identified in last inspection',
-          type: 'maintenance',
-          priority: 'medium',
-          assignedTo: 'AEN Sharma',
-          assignedToRole: 'AEN',
-          section: 'Section B-456',
-          dueDate: new Date('2024-01-28'),
-          status: 'in_progress',
-          createdDate: new Date('2024-01-18'),
-          estimatedHours: 12,
-          notes: 'Materials already ordered and delivered to site'
-        },
-        {
-          id: 'TASK-003',
-          title: 'Signal System Survey',
-          description: 'Survey existing signal infrastructure for upcoming digitization project',
-          type: 'survey',
-          priority: 'low',
-          assignedTo: 'AEN Patel',
-          assignedToRole: 'AEN',
-          section: 'Section C-789',
-          dueDate: new Date('2024-02-05'),
-          status: 'assigned',
-          createdDate: new Date('2024-01-19'),
-          estimatedHours: 16,
-          notes: 'Coordinate with signaling department for technical specifications'
-        },
-        {
-          id: 'TASK-004',
-          title: 'Emergency Track Repair',
-          description: 'Repair damaged track section due to heavy rainfall impact',
-          type: 'repair',
-          priority: 'high',
-          assignedTo: 'AEN Singh',
-          assignedToRole: 'AEN',
-          section: 'Section D-012',
-          dueDate: new Date('2024-01-22'),
-          status: 'overdue',
-          createdDate: new Date('2024-01-15'),
-          estimatedHours: 8,
-          notes: 'Urgent repair required to restore normal operations'
-        },
-        {
-          id: 'TASK-005',
-          title: 'Sleeper Condition Assessment',
-          description: 'Assess concrete sleeper condition and identify replacement requirements',
-          type: 'inspection',
-          priority: 'medium',
-          assignedTo: 'AEN Gupta',
-          assignedToRole: 'AEN',
-          section: 'Section E-345',
-          dueDate: new Date('2024-01-30'),
-          status: 'completed',
-          createdDate: new Date('2024-01-16'),
-          estimatedHours: 10,
-          notes: 'Report submitted with detailed findings and recommendations'
-        }
-      ];
-
-      setTasks(mockTasks);
-    } catch (error) {
-      console.error('Error loading tasks:', error);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading tasks...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const createTask = () => {
     if (newTask.title && newTask.assignedTo && newTask.section) {
@@ -146,19 +80,26 @@ const AssignTasks: React.FC = () => {
         notes: newTask.notes
       };
 
-      setTasks([...tasks, task]);
-      setShowCreateModal(false);
-      setNewTask({
-        title: '',
-        description: '',
-        type: 'inspection',
-        priority: 'medium',
-        assignedTo: '',
-        assignedToRole: 'AEN',
-        section: '',
-        dueDate: new Date(),
-        estimatedHours: 8
-      });
+      // Add task using the TasksService
+      TasksService.addTask(task)
+        .then(() => {
+          console.log('Task created successfully');
+          setShowCreateModal(false);
+          setNewTask({
+            title: '',
+            description: '',
+            type: 'inspection',
+            priority: 'medium',
+            assignedTo: '',
+            assignedToRole: 'AEN',
+            section: '',
+            dueDate: new Date(),
+            estimatedHours: 8
+          });
+        })
+        .catch((error) => {
+          console.error('Error creating task:', error);
+        });
     }
   };
 

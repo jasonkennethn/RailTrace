@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Search, Filter, Eye, CheckCircle, XCircle, MapPin, Calendar, Shield } from 'lucide-react';
+import { InspectionsService } from '../services/dataService';
 import { useTheme } from '../contexts/ThemeContext';
 import clsx from 'clsx';
 
@@ -31,7 +32,32 @@ const InspectionHistory: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadInspectionHistory();
+    // Real-time data subscription for historical inspections
+    const unsubscribe = InspectionsService.subscribeToInspections((fetchedInspections) => {
+      // Convert to historical inspection format
+      const historicalInspections: HistoricalInspection[] = fetchedInspections.map(inspection => ({
+        id: inspection.id,
+        productId: inspection.productId,
+        productName: `Product ${inspection.productId}`,
+        section: inspection.location || 'Unknown Section',
+        inspectionDate: inspection.date,
+        status: inspection.status as 'passed' | 'failed' | 'requires_attention',
+        condition: inspection.status === 'passed' ? 'good' : inspection.status === 'failed' ? 'poor' : 'fair',
+        findings: inspection.notes,
+        recommendations: inspection.status === 'failed' ? 'Immediate attention required' : 'Continue monitoring',
+        inspectorName: inspection.inspectorName,
+        blockchainHash: inspection.blockchainHash || '',
+        images: inspection.images || [],
+        defects: inspection.status === 'failed' ? ['Identified issues'] : [],
+        maintenancePerformed: ['Inspection completed'],
+        nextInspectionDue: new Date(inspection.date.getTime() + 90 * 24 * 60 * 60 * 1000) // 90 days from inspection
+      }));
+      
+      setInspections(historicalInspections);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const loadInspectionHistory = async () => {

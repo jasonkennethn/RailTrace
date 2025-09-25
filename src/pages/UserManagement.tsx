@@ -1,47 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Search, Filter, UserCheck } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { UsersService } from '../services/dataService';
 
 const UserManagement: React.FC = () => {
   const { user } = useAuth();
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      email: 'admin@railway.gov.in',
-      name: 'Admin User',
-      role: 'admin',
-      division: 'Central Railway',
-      section: 'Mumbai Division',
-      createdAt: new Date('2024-01-15'),
-      lastLogin: new Date('2024-01-20')
-    },
-    {
-      id: '2',
-      email: 'drm@railway.gov.in',
-      name: 'DRM User',
-      role: 'drm',
-      division: 'Western Railway',
-      section: 'Ahmedabad Division',
-      createdAt: new Date('2024-01-10'),
-      lastLogin: new Date('2024-01-19')
-    },
-    {
-      id: '3',
-      email: 'inspector@railway.gov.in',
-      name: 'Inspector User',
-      role: 'inspector',
-      division: 'Northern Railway',
-      section: 'Delhi Division',
-      createdAt: new Date('2024-01-12'),
-      lastLogin: new Date('2024-01-18')
-    }
-  ]);
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  // Real-time data subscription
+  useEffect(() => {
+    const unsubscribe = UsersService.subscribeToUsers((fetchedUsers) => {
+      setUsers(fetchedUsers);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const roles: { value: UserRole; label: string }[] = [
     { value: 'admin', label: 'Administrator' },

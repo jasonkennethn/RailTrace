@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileCheck, Search, Filter, Download, Eye, Shield, Clock, User } from 'lucide-react';
+import { AuditLogsService } from '../services/dataService';
 
 interface AuditLog {
   id: string;
@@ -20,72 +21,31 @@ const AuditLogs: React.FC = () => {
   const [selectedAction, setSelectedAction] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [dateRange, setDateRange] = useState<string>('7days');
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const auditLogs: AuditLog[] = [
-    {
-      id: '1',
-      timestamp: new Date('2024-01-20T10:30:00'),
-      userId: 'user_123',
-      userName: 'Inspector John',
-      action: 'INSPECTION_CREATED',
-      resource: 'Product RJ-456',
-      details: 'Created inspection record for rail joint RJ-456',
-      ipAddress: '192.168.1.100',
-      userAgent: 'Mozilla/5.0 (Mobile)',
-      blockchainHash: '0x123abc456def789',
-      status: 'success'
-    },
-    {
-      id: '2',
-      timestamp: new Date('2024-01-20T09:15:00'),
-      userId: 'user_456',
-      userName: 'DRM Smith',
-      action: 'APPROVAL_GRANTED',
-      resource: 'Inspection Report IR-789',
-      details: 'Approved inspection report for track section A-123',
-      ipAddress: '192.168.1.101',
-      userAgent: 'Mozilla/5.0 (Windows)',
-      blockchainHash: '0x456def789abc123',
-      status: 'success'
-    },
-    {
-      id: '3',
-      timestamp: new Date('2024-01-20T08:45:00'),
-      userId: 'user_789',
-      userName: 'Admin User',
-      action: 'USER_CREATED',
-      resource: 'User Account',
-      details: 'Created new inspector account for Mumbai Division',
-      ipAddress: '192.168.1.102',
-      userAgent: 'Mozilla/5.0 (Windows)',
-      status: 'success'
-    },
-    {
-      id: '4',
-      timestamp: new Date('2024-01-20T08:30:00'),
-      userId: 'user_101',
-      userName: 'Manufacturer ABC',
-      action: 'PRODUCT_REGISTERED',
-      resource: 'Product Batch B-2024',
-      details: 'Registered new product batch with 500 rail joints',
-      ipAddress: '203.45.67.89',
-      userAgent: 'Mozilla/5.0 (Windows)',
-      blockchainHash: '0x789abc123def456',
-      status: 'success'
-    },
-    {
-      id: '5',
-      timestamp: new Date('2024-01-20T07:20:00'),
-      userId: 'user_202',
-      userName: 'Inspector Jane',
-      action: 'LOGIN_FAILED',
-      resource: 'Authentication System',
-      details: 'Failed login attempt - invalid credentials',
-      ipAddress: '192.168.1.105',
-      userAgent: 'Mozilla/5.0 (Mobile)',
-      status: 'failed'
-    }
-  ];
+  useEffect(() => {
+    // Real-time data subscription
+    const unsubscribe = AuditLogsService.subscribeToAuditLogs((fetchedLogs) => {
+      setAuditLogs(fetchedLogs);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading audit logs...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const actions = [
     'INSPECTION_CREATED',

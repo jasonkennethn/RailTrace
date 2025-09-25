@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, AlertTriangle, DollarSign, FileText, User, Calendar } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { ApprovalRequestsService } from '../services/dataService';
 
 interface ApprovalRequest {
   id: string;
@@ -21,64 +22,30 @@ const ApprovalRequests: React.FC = () => {
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data based on user role
-    const mockRequests: ApprovalRequest[] = [
-      {
-        id: 'REQ-001',
-        type: 'budget',
-        title: 'Additional Budget for Track Modernization',
-        requestedBy: user?.role === 'drm' ? 'Sr. DEN Kumar' : user?.role === 'sr_den' ? 'DEN Sharma' : 'AEN Patel',
-        requestedByRole: user?.role === 'drm' ? 'Sr. DEN' : user?.role === 'sr_den' ? 'DEN' : 'AEN',
-        amount: 2500000,
-        description: 'Request for additional budget allocation for track modernization project in Section A-123. Current budget insufficient for quality materials.',
-        priority: 'high',
-        status: 'pending',
-        createdAt: new Date('2024-01-20T10:30:00'),
-        documents: ['budget-proposal.pdf', 'cost-analysis.xlsx']
-      },
-      {
-        id: 'REQ-002',
-        type: 'product',
-        title: 'Emergency Rail Joint Replacement',
-        requestedBy: user?.role === 'drm' ? 'DEN Mumbai' : user?.role === 'sr_den' ? 'DEN Central' : 'Inspector Singh',
-        requestedByRole: user?.role === 'drm' ? 'DEN' : user?.role === 'sr_den' ? 'DEN' : 'Inspector',
-        description: 'Urgent requirement for 50 heavy-duty rail joints for emergency replacement in high-traffic section.',
-        priority: 'high',
-        status: 'pending',
-        createdAt: new Date('2024-01-19T14:15:00'),
-        documents: ['inspection-report.pdf']
-      },
-      {
-        id: 'REQ-003',
-        type: 'maintenance',
-        title: 'Scheduled Bridge Maintenance',
-        requestedBy: user?.role === 'drm' ? 'Sr. DEN Pune' : user?.role === 'sr_den' ? 'DEN West' : 'AEN Kumar',
-        requestedByRole: user?.role === 'drm' ? 'Sr. DEN' : user?.role === 'sr_den' ? 'DEN' : 'AEN',
-        amount: 850000,
-        description: 'Routine maintenance work for Bridge BR-789 including structural inspection and minor repairs.',
-        priority: 'medium',
-        status: 'approved',
-        createdAt: new Date('2024-01-18T09:45:00')
-      },
-      {
-        id: 'REQ-004',
-        type: 'project',
-        title: 'New Signal Installation Project',
-        requestedBy: user?.role === 'drm' ? 'Sr. DEN Delhi' : user?.role === 'sr_den' ? 'DEN North' : 'AEN Sharma',
-        requestedByRole: user?.role === 'drm' ? 'Sr. DEN' : user?.role === 'sr_den' ? 'DEN' : 'AEN',
-        amount: 1200000,
-        description: 'Installation of new digital signaling system in Section C-456 to improve safety and efficiency.',
-        priority: 'medium',
-        status: 'pending',
-        createdAt: new Date('2024-01-17T16:20:00'),
-        documents: ['project-proposal.pdf', 'technical-specs.pdf']
-      }
-    ];
+    // Real-time data subscription
+    const unsubscribe = ApprovalRequestsService.subscribeToApprovalRequests((fetchedRequests) => {
+      setRequests(fetchedRequests);
+      setLoading(false);
+    });
 
-    setRequests(mockRequests);
-  }, [user?.role]);
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading approval requests...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleApproval = (requestId: string, action: 'approve' | 'reject') => {
     setRequests(requests.map(req => 
