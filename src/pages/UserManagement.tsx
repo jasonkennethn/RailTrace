@@ -12,6 +12,14 @@ const UserManagement: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    role: 'inspector' as UserRole,
+    division: '',
+    section: '',
+    password: ''
+  });
 
   // Real-time data subscription
   useEffect(() => {
@@ -26,7 +34,6 @@ const UserManagement: React.FC = () => {
   const roles: { value: UserRole; label: string }[] = [
     { value: 'admin', label: 'Administrator' },
     { value: 'drm', label: 'DRM' },
-
     { value: 'den', label: 'DEN' },
     { value: 'inspector', label: 'Inspector' },
     { value: 'manufacturer', label: 'Manufacturer' }
@@ -52,6 +59,37 @@ const UserManagement: React.FC = () => {
 
   const handleDeleteUser = (userId: string) => {
     setUsers(users.filter(user => user.id !== userId));
+  };
+
+  const handleAddUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    try {
+      const userData: Omit<User, 'id' | 'createdAt' | 'lastLogin'> = {
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        division: newUser.division,
+        section: newUser.section
+      };
+
+      await UsersService.addUser(userData);
+      setShowAddModal(false);
+      setNewUser({
+        name: '',
+        email: '',
+        role: 'inspector',
+        division: '',
+        section: '',
+        password: ''
+      });
+    } catch (error) {
+      console.error('Error adding user:', error);
+      alert('Failed to add user. Please try again.');
+    }
   };
 
   return (
@@ -215,6 +253,111 @@ const UserManagement: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add New User</h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter full name"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter email address"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  {roles.map(role => (
+                    <option key={role.value} value={role.value}>{role.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Division</label>
+                <input
+                  type="text"
+                  value={newUser.division}
+                  onChange={(e) => setNewUser({ ...newUser, division: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter division"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</label>
+                <input
+                  type="text"
+                  value={newUser.section}
+                  onChange={(e) => setNewUser({ ...newUser, section: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter section"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+
+              <div className="flex space-x-4 pt-4">
+                <button
+                  onClick={handleAddUser}
+                  className="flex-1 bg-blue-800 hover:bg-blue-900 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                >
+                  Add User
+                </button>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

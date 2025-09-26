@@ -503,6 +503,19 @@ export class ApprovalRequestsService {
     }
   }
 
+  static async addApprovalRequest(requestData: Omit<ApprovalRequest, 'id' | 'createdAt'>): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, this.collectionName), {
+        ...requestData,
+        createdAt: serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding approval request:', error);
+      throw new Error('Failed to add approval request');
+    }
+  }
+
   private static getDemoApprovalRequests(): ApprovalRequest[] {
     return [
       {

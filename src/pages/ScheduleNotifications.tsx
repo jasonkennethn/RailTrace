@@ -19,6 +19,15 @@ const ScheduleNotifications: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'overdue'>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newNotification, setNewNotification] = useState({
+    title: '',
+    description: '',
+    type: 'inspection' as Notification['type'],
+    priority: 'medium' as Notification['priority'],
+    date: new Date(),
+    assignedTo: ''
+  });
 
   useEffect(() => {
     // Mock notifications data
@@ -77,6 +86,35 @@ const ScheduleNotifications: React.FC = () => {
 
     setNotifications(mockNotifications);
   }, []);
+
+  const handleAddSchedule = () => {
+    if (!newNotification.title || !newNotification.description) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    const notification: Notification = {
+      id: `${notifications.length + 1}`,
+      title: newNotification.title,
+      description: newNotification.description,
+      type: newNotification.type,
+      priority: newNotification.priority,
+      date: newNotification.date,
+      status: 'pending',
+      assignedTo: newNotification.assignedTo
+    };
+
+    setNotifications([notification, ...notifications]);
+    setShowAddModal(false);
+    setNewNotification({
+      title: '',
+      description: '',
+      type: 'inspection',
+      priority: 'medium',
+      date: new Date(),
+      assignedTo: ''
+    });
+  };
 
   const filteredNotifications = notifications.filter(notification => {
     const matchesStatus = filter === 'all' || notification.status === filter;
@@ -171,7 +209,10 @@ const ScheduleNotifications: React.FC = () => {
               </select>
             </div>
           </div>
-          <button className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2">
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2"
+          >
             <Plus className="h-5 w-5" />
             <span>Add Schedule</span>
           </button>
@@ -289,6 +330,112 @@ const ScheduleNotifications: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Schedule Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-dark-800 rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add New Schedule</h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={newNotification.title}
+                  onChange={(e) => setNewNotification({ ...newNotification, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                  placeholder="Enter schedule title"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <textarea
+                  value={newNotification.description}
+                  onChange={(e) => setNewNotification({ ...newNotification, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                  placeholder="Enter description"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                <select
+                  value={newNotification.type}
+                  onChange={(e) => setNewNotification({ ...newNotification, type: e.target.value as Notification['type'] })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                >
+                  <option value="inspection">Inspection</option>
+                  <option value="deadline">Deadline</option>
+                  <option value="alert">Alert</option>
+                  <option value="maintenance">Maintenance</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                <select
+                  value={newNotification.priority}
+                  onChange={(e) => setNewNotification({ ...newNotification, priority: e.target.value as Notification['priority'] })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={newNotification.date.toISOString().slice(0, 16)}
+                  onChange={(e) => setNewNotification({ ...newNotification, date: new Date(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned To (Optional)</label>
+                <input
+                  type="text"
+                  value={newNotification.assignedTo}
+                  onChange={(e) => setNewNotification({ ...newNotification, assignedTo: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                  placeholder="Enter assignee name"
+                />
+              </div>
+
+              <div className="flex space-x-4 pt-4">
+                <button
+                  onClick={handleAddSchedule}
+                  className="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                >
+                  Add Schedule
+                </button>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 bg-gray-300 dark:bg-dark-600 hover:bg-gray-400 dark:hover:bg-dark-500 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

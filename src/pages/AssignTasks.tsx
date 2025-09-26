@@ -62,10 +62,9 @@ const AssignTasks: React.FC = () => {
     );
   }
 
-  const createTask = () => {
+  const createTask = async () => {
     if (newTask.title && newTask.assignedTo && newTask.section) {
-      const task: Task = {
-        id: `TASK-${String(tasks.length + 1).padStart(3, '0')}`,
+      const task: Omit<Task, 'id' | 'createdDate'> = {
         title: newTask.title!,
         description: newTask.description || '',
         type: newTask.type as Task['type'],
@@ -75,31 +74,32 @@ const AssignTasks: React.FC = () => {
         section: newTask.section!,
         dueDate: newTask.dueDate!,
         status: 'assigned',
-        createdDate: new Date(),
         estimatedHours: newTask.estimatedHours || 8,
         notes: newTask.notes
       };
 
-      // Add task using the TasksService
-      TasksService.addTask(task)
-        .then(() => {
-          console.log('Task created successfully');
-          setShowCreateModal(false);
-          setNewTask({
-            title: '',
-            description: '',
-            type: 'inspection',
-            priority: 'medium',
-            assignedTo: '',
-            assignedToRole: 'AEN',
-            section: '',
-            dueDate: new Date(),
-            estimatedHours: 8
-          });
-        })
-        .catch((error) => {
-          console.error('Error creating task:', error);
+      try {
+        // Add task using the TasksService
+        await TasksService.addTask(task);
+        console.log('Task created successfully');
+        setShowCreateModal(false);
+        setNewTask({
+          title: '',
+          description: '',
+          type: 'inspection',
+          priority: 'medium',
+          assignedTo: '',
+          assignedToRole: 'AEN',
+          section: '',
+          dueDate: new Date(),
+          estimatedHours: 8
         });
+      } catch (error) {
+        console.error('Error creating task:', error);
+        alert('Failed to create task. Please try again.');
+      }
+    } else {
+      alert('Please fill in all required fields (Title, Assigned To, and Section).');
     }
   };
 
@@ -452,8 +452,10 @@ const AssignTasks: React.FC = () => {
 
               <div className="flex space-x-4 pt-4">
                 <button
+                  type="button"
                   onClick={createTask}
-                  className="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                  disabled={!newTask.title || !newTask.assignedTo || !newTask.section}
+                  className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Create Task</span>

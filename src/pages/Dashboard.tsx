@@ -2,19 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import DashboardCard from '../components/ui/DashboardCard';
 import ChartContainer, { ChartType } from '../components/charts/ChartContainer';
-import { DashboardCard as CardType } from '../types';
+import { DashboardCard as DashboardCardType } from '../types';
 import { AnalyticsService } from '../services/dataService';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       AnalyticsService.getDashboardData(user.role)
-        .then((data) => {
-          setDashboardData(data);
+        .then(() => {
           setLoading(false);
         })
         .catch((error) => {
@@ -40,7 +38,7 @@ const Dashboard: React.FC = () => {
   }
 
   // Role-specific dashboard data with real-time counts
-  const getDashboardCards = (): DashboardCard[] => {
+  const getDashboardCards = (): DashboardCardType[] => {
     switch (user?.role) {
       case 'admin':
         return [
@@ -78,7 +76,6 @@ const Dashboard: React.FC = () => {
         title: user.role === 'admin' ? 'System Activity' : 
                user.role === 'drm' ? 'Division Inspections' :
                user.role === 'den' ? 'Section & Sub-Division Analysis' :
-               user.role === 'den' ? 'Section Tasks' :
                user.role === 'inspector' ? 'Daily Inspections' :
                'Monthly Orders',
         data: [
@@ -95,7 +92,6 @@ const Dashboard: React.FC = () => {
         title: user.role === 'admin' ? 'System Performance' :
                user.role === 'drm' ? 'Division Performance' :
                user.role === 'den' ? 'Combined section and sub-division performance tracking' :
-               user.role === 'den' ? 'Section Efficiency' :
                user.role === 'inspector' ? 'Inspection Quality' :
                'Product Performance',
         data: [
@@ -135,28 +131,6 @@ const Dashboard: React.FC = () => {
       case 'inspector': return 'Field Inspector';
       case 'manufacturer': return 'Manufacturer';
       default: return 'User';
-    }
-  };
-
-  const getChartTitle = () => {
-    switch (user?.role) {
-      case 'admin': return 'System Usage Overview';
-      case 'drm': return 'Division Performance';
-      case 'den': return 'Section & Sub-Division Analysis';
-      case 'inspector': return 'Inspection Activity';
-      case 'manufacturer': return 'Production Analytics';
-      default: return 'Analytics';
-    }
-  };
-
-  const getChartSubtitle = () => {
-    switch (user?.role) {
-      case 'admin': return 'Platform-wide metrics and system health indicators';
-      case 'drm': return 'Division-level performance and operational metrics';
-      case 'den': return 'Combined section and sub-division performance tracking';
-      case 'inspector': return 'Field inspection activities and completion rates';
-      case 'manufacturer': return 'Manufacturing output and quality metrics';
-      default: return 'Performance metrics';
     }
   };
 
@@ -200,19 +174,43 @@ const Dashboard: React.FC = () => {
             { action: 'System backup', item: 'Automated backup completed', time: '4 hours ago' },
             { action: 'Security scan', item: 'Vulnerability check passed', time: '6 hours ago' },
             { action: 'Data export', item: 'Monthly report generated', time: '8 hours ago' },
-          ]}
+          ].map((activity, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{activity.item}</p>
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</span>
+            </div>
+          ))}
           {user.role === 'drm' && [
             { action: 'Report generated', item: 'Weekly division summary', time: '1 hour ago' },
             { action: 'User approved', item: 'New field inspector', time: '3 hours ago' },
             { action: 'Schedule updated', item: 'Monthly inspection plan', time: '5 hours ago' },
             { action: 'Notification sent', item: 'Safety protocol update', time: '7 hours ago' },
-          ]}
+          ].map((activity, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{activity.item}</p>
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</span>
+            </div>
+          ))}
           {user.role === 'den' && [
             { action: 'Sub-division report', item: 'Weekly efficiency summary', time: '30 minutes ago' },
             { action: 'Task assigned', item: 'Track inspection - Section A', time: '2 hours ago' },
             { action: 'Inspection completed', item: 'Signal equipment check', time: '4 hours ago' },
             { action: 'Approval processed', item: 'Equipment requisition', time: '6 hours ago' },
-          ]}
+          ].map((activity, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{activity.item}</p>
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</span>
+            </div>
+          ))}
 
           {user.role === 'inspector' && [
             { action: 'Product scanned', item: 'Rail Joint RJ-456', time: '30 minutes ago' },

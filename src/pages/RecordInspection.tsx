@@ -108,6 +108,25 @@ const RecordInspection: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!inspectionData.productId || !inspectionData.productName || !inspectionData.section) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+    
+    // Validate photo upload requirement
+    if (inspectionData.images.length === 0) {
+      alert('At least one inspection photo must be uploaded before submitting the record.');
+      return;
+    }
+    
+    // Validate findings field
+    if (!inspectionData.findings.trim()) {
+      alert('Please provide detailed inspection findings.');
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
@@ -139,6 +158,7 @@ const RecordInspection: React.FC = () => {
 
     } catch (error) {
       console.error('Error recording inspection:', error);
+      alert('Failed to record inspection. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -409,14 +429,33 @@ const RecordInspection: React.FC = () => {
 
         {/* Image Upload */}
         <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Inspection Images</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Inspection Images <span className="text-red-500">*</span>
+          </h3>
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Images</label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-dark-600 rounded-lg p-6 text-center">
-                <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400 mb-2">Click to upload or drag and drop</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Upload Images <span className="text-sm text-red-500">(Required - At least 1 photo)</span>
+              </label>
+              <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                inspectionData.images.length === 0 
+                  ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/10' 
+                  : 'border-gray-300 dark:border-dark-600'
+              }`}>
+                <Camera className={`h-12 w-12 mx-auto mb-4 ${
+                  inspectionData.images.length === 0 ? 'text-red-400' : 'text-gray-400'
+                }`} />
+                <p className={`mb-2 ${
+                  inspectionData.images.length === 0 
+                    ? 'text-red-600 dark:text-red-400' 
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {inspectionData.images.length === 0 
+                    ? 'Please upload at least one inspection photo' 
+                    : 'Click to upload or drag and drop'
+                  }
+                </p>
                 <input
                   type="file"
                   multiple
@@ -464,30 +503,84 @@ const RecordInspection: React.FC = () => {
 
         {/* Submit Button */}
         <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                This inspection will be recorded securely in the system
-              </span>
+          <div className="space-y-4">
+            {/* Validation Summary */}
+            <div className="flex items-start space-x-3">
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Pre-submission Checklist:</h4>
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    {inspectionData.productId && inspectionData.productName && inspectionData.section ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className={`text-sm ${
+                      inspectionData.productId && inspectionData.productName && inspectionData.section
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      Product information completed
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {inspectionData.findings.trim() ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className={`text-sm ${
+                      inspectionData.findings.trim()
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      Inspection findings provided
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {inspectionData.images.length > 0 ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className={`text-sm ${
+                      inspectionData.images.length > 0
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      At least one photo uploaded ({inspectionData.images.length} photos)
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center space-x-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  <span>Recording Inspection...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  <span>Record Inspection</span>
-                </>
-              )}
-            </button>
+            
+            {/* Submit Button */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  This inspection will be recorded securely in the system
+                </span>
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center space-x-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <span>Recording Inspection...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Record Inspection</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </form>

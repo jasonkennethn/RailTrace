@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Send, Plus, Trash2, Package, MapPin, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { ApprovalRequestsService } from '../services/dataService';
 import clsx from 'clsx';
 
 interface ProductRequest {
@@ -26,6 +28,7 @@ interface SubmittedRequest {
 
 const RequestProducts: React.FC = () => {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [requests, setRequests] = useState<ProductRequest[]>([
     {
       productName: '',
@@ -97,15 +100,54 @@ const RequestProducts: React.FC = () => {
         return;
       }
 
-      // Simulate submission
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create a combined approval request for all products
+      const productNames = validRequests.map(req => req.productName).join(', ');
+      const totalCost = validRequests.reduce((sum, req) => sum + req.estimatedCost, 0);
+      const highestUrgency = validRequests.reduce((highest, req) => {
+        const urgencyMap: Record<string, number> = { 'low': 1, 'medium': 2, 'high': 3, 'emergency': 3 };
+        return urgencyMap[req.urgency] > urgencyMap[highest] ? req.urgency : highest;
+      }, 'low' as string);
+
+      // Create approval request data
+      const approvalRequestData = {
+        type: 'product' as const,
+        title: validRequests.length === 1 
+          ? `Product Request: ${validRequests[0].productName}`
+          : `Bulk Product Request (${validRequests.length} items)`,
+        requestedBy: user?.name || 'Field Inspector',
+        requestedByRole: user?.role || 'inspector',
+        description: validRequests.length === 1
+          ? `Request for ${validRequests[0].quantity} ${validRequests[0].productName} in ${validRequests[0].section}. Justification: ${validRequests[0].justification}`
+          : `Bulk request for multiple products:\n${validRequests.map(req => 
+              `• ${req.quantity}x ${req.productName} (${req.productCategory}) - ${req.section} - ₹${req.estimatedCost.toLocaleString()}`
+            ).join('\n')}\n\nRequired by: ${validRequests[0].requiredBy.toLocaleDateString()}`,
+        priority: highestUrgency === 'emergency' ? 'high' : highestUrgency as 'low' | 'medium' | 'high',
+        status: 'pending' as const,
+        amount: totalCost > 0 ? totalCost : undefined,
+        category: validRequests[0].productCategory,
+        productType: productNames,
+        // Add some sample manufacturer data for demo
+        manufacturer: 'Steel Works India Ltd.',
+        manufacturerRating: 4.8,
+        qualityScore: 4.9,
+        deliveryScore: 4.7,
+        costScore: 4.6,
+        overallScore: 4.8,
+        documents: [`product-request-${Date.now()}.pdf`]
+      };
+
+      // Submit to approval system
+      await ApprovalRequestsService.addApprovalRequest(approvalRequestData);
+
+      // Simulate local submission for UI purposes
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const newSubmission: SubmittedRequest = {
         id: `REQ-${Date.now()}`,
         products: validRequests,
         submittedDate: new Date(),
         status: 'pending',
-        totalCost: validRequests.reduce((sum, req) => sum + req.estimatedCost, 0)
+        totalCost: totalCost
       };
 
       setSubmittedRequests([newSubmission, ...submittedRequests]);
@@ -129,6 +171,7 @@ const RequestProducts: React.FC = () => {
 
     } catch (error) {
       console.error('Error submitting request:', error);
+      alert('Failed to submit request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -173,7 +216,7 @@ const RequestProducts: React.FC = () => {
             Request Submitted Successfully!
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Your product request has been submitted to the AEN for approval.
+            Your product request has been submitted to the DEN for approval and will appear in their approval requests dashboard.
           </p>
           <button
             onClick={() => setShowSuccess(false)}

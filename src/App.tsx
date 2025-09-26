@@ -7,6 +7,8 @@ import SignUpForm from './components/auth/SignUpForm';
 import LoadingScreen from './components/ui/LoadingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import Sidebar from './components/layout/Sidebar';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import UnauthorizedPage from './components/auth/UnauthorizedPage';
 import Dashboard from './pages/Dashboard';
 import ScanProduct from './pages/ScanProduct';
 import UserManagement from './pages/UserManagement';
@@ -56,27 +58,108 @@ const AppRoutes: React.FC = () => {
         <div className="pt-16 lg:pt-0">
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/scan" element={<ScanProduct />} />
-            <Route path="/users" element={<UserManagement />} />
-            <Route path="/roles" element={<RoleManagement />} />
-            <Route path="/audit" element={<AuditLogs />} />
-            <Route path="/inspections" element={<Inspections />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/reports" element={<Reports />} />
+            <Route path="/scan" element={
+              <ProtectedRoute allowedRoles={['inspector']}>
+                <ScanProduct />
+              </ProtectedRoute>
+            } />
+            <Route path="/users" element={
+              <ProtectedRoute allowedRoles={['admin', 'drm']}>
+                <UserManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/roles" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <RoleManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/audit" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AuditLogs />
+              </ProtectedRoute>
+            } />
+            <Route path="/inspections" element={
+              <ProtectedRoute allowedRoles={['admin', 'drm', 'den', 'inspector']}>
+                <Inspections />
+              </ProtectedRoute>
+            } />
+            <Route path="/inventory" element={
+              <ProtectedRoute allowedRoles={['manufacturer']}>
+                <Inventory />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute allowedRoles={['admin', 'drm', 'manufacturer']}>
+                <Reports />
+              </ProtectedRoute>
+            } />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/division-reports" element={<DivisionReports />} />
-            <Route path="/approval-requests" element={<ApprovalRequests />} />
-            <Route path="/schedule-notifications" element={<ScheduleNotifications />} />
-            <Route path="/subdivision-reports" element={<SubDivisionReports />} />
-            <Route path="/inspection-overview" element={<InspectionOverview />} />
-            <Route path="/order-management" element={<OrderManagement />} />
-            <Route path="/product-details" element={<ProductDetails />} />
-            <Route path="/section-reports" element={<SectionReports />} />
-            <Route path="/assign-tasks" element={<AssignTasks />} />
-            <Route path="/inspection-logs" element={<InspectionLogs />} />
-            <Route path="/record-inspection" element={<RecordInspection />} />
-            <Route path="/request-products" element={<RequestProducts />} />
-            <Route path="/inspection-history" element={<InspectionHistory />} />
+            <Route path="/division-reports" element={
+              <ProtectedRoute allowedRoles={['drm']}>
+                <DivisionReports />
+              </ProtectedRoute>
+            } />
+            <Route path="/approval-requests" element={
+              <ProtectedRoute allowedRoles={['den']}>
+                <ApprovalRequests />
+              </ProtectedRoute>
+            } />
+            <Route path="/schedule-notifications" element={
+              <ProtectedRoute allowedRoles={['drm']}>
+                <ScheduleNotifications />
+              </ProtectedRoute>
+            } />
+            <Route path="/subdivision-reports" element={
+              <ProtectedRoute allowedRoles={['den']}>
+                <SubDivisionReports />
+              </ProtectedRoute>
+            } />
+            <Route path="/inspection-overview" element={
+              <ProtectedRoute allowedRoles={['den']}>
+                <InspectionOverview />
+              </ProtectedRoute>
+            } />
+            <Route path="/order-management" element={
+              <ProtectedRoute allowedRoles={['manufacturer']}>
+                <OrderManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/product-details" element={
+              <ProtectedRoute allowedRoles={['manufacturer']}>
+                <ProductDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/section-reports" element={
+              <ProtectedRoute allowedRoles={['den']}>
+                <SectionReports />
+              </ProtectedRoute>
+            } />
+            <Route path="/assign-tasks" element={
+              <ProtectedRoute allowedRoles={['den']}>
+                <AssignTasks />
+              </ProtectedRoute>
+            } />
+            <Route path="/inspection-logs" element={
+              <ProtectedRoute allowedRoles={['den']}>
+                <InspectionLogs />
+              </ProtectedRoute>
+            } />
+            <Route path="/record-inspection" element={
+              <ProtectedRoute allowedRoles={['inspector']}>
+                <RecordInspection />
+              </ProtectedRoute>
+            } />
+            <Route path="/request-products" element={
+              <ProtectedRoute allowedRoles={['inspector']}>
+                <RequestProducts />
+              </ProtectedRoute>
+            } />
+            <Route path="/inspection-history" element={
+              <ProtectedRoute allowedRoles={['inspector']}>
+                <InspectionHistory />
+              </ProtectedRoute>
+            } />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </div>
