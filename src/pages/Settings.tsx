@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, User, Bell, Shield, Globe, Save, Eye, EyeOff } from 'lucide-react';
+import { User, Bell, Shield, Globe, Save, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 
 interface SettingsState {
   profile: {
@@ -32,13 +31,11 @@ interface SettingsState {
     timezone: string;
     dateFormat: string;
     currency: string;
-    theme: string;
   };
 }
 
 const Settings: React.FC = () => {
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [settings, setSettings] = useState<SettingsState>({
@@ -72,8 +69,7 @@ const Settings: React.FC = () => {
       language: 'en',
       timezone: 'Asia/Kolkata',
       dateFormat: 'DD/MM/YYYY',
-      currency: 'INR',
-      theme: theme
+      currency: 'INR'
     }
   });
 
@@ -446,18 +442,17 @@ const Settings: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Theme</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Currency</label>
                 <select
-                  value={theme}
-                  onChange={(e) => {
-                    if (e.target.value !== theme) {
-                      toggleTheme();
-                    }
-                  }}
+                  value={settings.system.currency}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    system: { ...settings.system, currency: e.target.value }
+                  })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
+                  <option value="INR">INR (₹)</option>
+                  <option value="USD">USD ($)</option>
                 </select>
               </div>
             </div>

@@ -466,6 +466,20 @@ export class AnalyticsService {
 // Approval Requests Service
 export class ApprovalRequestsService {
   private static collectionName = 'approvalRequests';
+  private static demoRequests: ApprovalRequest[] = [];
+  private static isInitialized = false;
+  private static subscribers: ((requests: ApprovalRequest[]) => void)[] = [];
+
+  private static initializeDemoData() {
+    if (!this.isInitialized) {
+      this.demoRequests = this.getDemoApprovalRequests();
+      this.isInitialized = true;
+    }
+  }
+
+  private static notifySubscribers() {
+    this.subscribers.forEach(callback => callback([...this.demoRequests]));
+  }
 
   static async getApprovalRequests(): Promise<ApprovalRequest[]> {
     try {
@@ -479,7 +493,8 @@ export class ApprovalRequestsService {
       })) as ApprovalRequest[];
     } catch (error) {
       console.error('Error fetching approval requests:', error);
-      return this.getDemoApprovalRequests();
+      this.initializeDemoData();
+      return [...this.demoRequests];
     }
   }
 
@@ -497,9 +512,22 @@ export class ApprovalRequestsService {
         }
       );
     } catch (error) {
-      console.error('Error subscribing to approval requests:', error);
-      callback(this.getDemoApprovalRequests());
-      return () => {};
+      console.error('Error subscribing to approval requests, using demo mode:', error);
+      this.initializeDemoData();
+      
+      // Add subscriber to demo mode subscriber list
+      this.subscribers.push(callback);
+      
+      // Immediately call with current data
+      callback([...this.demoRequests]);
+      
+      // Return unsubscribe function
+      return () => {
+        const index = this.subscribers.indexOf(callback);
+        if (index > -1) {
+          this.subscribers.splice(index, 1);
+        }
+      };
     }
   }
 
@@ -511,8 +539,20 @@ export class ApprovalRequestsService {
       });
       return docRef.id;
     } catch (error) {
-      console.error('Error adding approval request:', error);
-      throw new Error('Failed to add approval request');
+      console.error('Error adding approval request, using demo mode:', error);
+      // Fallback to demo mode - add to in-memory array
+      this.initializeDemoData();
+      const newRequest: ApprovalRequest = {
+        id: `REQ-${Date.now()}`,
+        ...requestData,
+        createdAt: new Date()
+      };
+      this.demoRequests.unshift(newRequest); // Add to beginning for newest first
+      
+      // Notify all subscribers of the new request
+      this.notifySubscribers();
+      
+      return newRequest.id;
     }
   }
 

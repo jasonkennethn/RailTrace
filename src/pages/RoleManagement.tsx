@@ -84,14 +84,34 @@ const RoleManagement: React.FC = () => {
     }
   ];
 
-  // Calculate role statistics dynamically based on real users data
-  const roleStats = [
-    { value: 'admin' as UserRole, label: 'Administrator', color: 'bg-red-100 text-red-800', users: users.filter(u => u.role === 'admin').length },
-    { value: 'drm' as UserRole, label: 'DRM', color: 'bg-blue-100 text-blue-800', users: users.filter(u => u.role === 'drm').length },
-    { value: 'den' as UserRole, label: 'DEN', color: 'bg-green-100 text-green-800', users: users.filter(u => u.role === 'den').length },
-    { value: 'inspector' as UserRole, label: 'Field Inspector', color: 'bg-purple-100 text-purple-800', users: users.filter(u => u.role === 'inspector').length },
-    { value: 'manufacturer' as UserRole, label: 'Manufacturer', color: 'bg-orange-100 text-orange-800', users: users.filter(u => u.role === 'manufacturer').length },
+  // Calculate role statistics dynamically based on real users data and database roles
+  const predefinedRoles = [
+    { value: 'admin' as UserRole, label: 'Administrator', color: 'bg-red-100 text-red-800' },
+    { value: 'drm' as UserRole, label: 'DRM', color: 'bg-blue-100 text-blue-800' },
+    { value: 'den' as UserRole, label: 'DEN', color: 'bg-green-100 text-green-800' },
+    { value: 'inspector' as UserRole, label: 'Field Inspector', color: 'bg-purple-100 text-purple-800' },
+    { value: 'manufacturer' as UserRole, label: 'Manufacturer', color: 'bg-orange-100 text-orange-800' },
   ];
+
+  // Get unique roles from database and combine with predefined ones
+  const databaseRoles = roles.map(role => ({
+    value: role.role,
+    label: role.name,
+    color: 'bg-cyan-100 text-cyan-800' // New roles get cyan color
+  }));
+
+  // Merge predefined and database roles, avoiding duplicates
+  const allRoles = [...predefinedRoles];
+  databaseRoles.forEach(dbRole => {
+    if (!predefinedRoles.find(pr => pr.value === dbRole.value)) {
+      allRoles.push(dbRole);
+    }
+  });
+
+  const roleStats = allRoles.map(role => ({
+    ...role,
+    users: users.filter(u => u.role === role.value).length
+  }));
 
   const getCurrentRolePermissions = () => {
     return rolePermissions.find(rp => rp.role === selectedRole)?.permissions || [];
