@@ -40,50 +40,32 @@ const Dashboard: React.FC = () => {
   }
 
   // Role-specific dashboard data with real-time counts
-  const getCardsForRole = (): CardType[] => {
-    const baseData = dashboardData || { summary: { totalUsers: 0, activeUsers: 0, totalProducts: 0, totalInspections: 0 } };
-    
-    switch (user.role) {
+  const getDashboardCards = (): DashboardCard[] => {
+    switch (user?.role) {
       case 'admin':
         return [
-          { title: 'Total Users', value: baseData.summary.totalUsers.toString(), change: '+12%', changeType: 'positive', icon: 'Users' },
-          { title: 'System Approvals', value: baseData.summary.totalInspections.toString(), change: '+5%', changeType: 'positive', icon: 'CheckCircle' },
-          { title: 'AI Analytics Score', value: '94.2', change: '+2.1', changeType: 'positive', icon: 'Brain' },
+          { title: 'Total Users', value: '156', change: '+12 this month', changeType: 'positive', icon: 'Users' },
+          { title: 'Active Inspections', value: '89', change: '+5 today', changeType: 'positive', icon: 'CheckCircle' },
+          { title: 'System Health', value: '98.5%', change: '+0.3% uptime', changeType: 'positive', icon: 'Shield' },
+          { title: 'Data Storage', value: '2.4TB', change: '+150GB this week', changeType: 'neutral', icon: 'Database' },
         ];
       case 'drm':
         return [
-          { title: 'Division Inspections', value: baseData.summary.totalInspections.toString(), change: '+7%', changeType: 'positive', icon: 'Search' },
-          { title: 'Active Products', value: baseData.summary.totalProducts.toString(), change: '+3', changeType: 'positive', icon: 'Package' },
-          { title: 'Product Performance', value: '92%', change: '+3%', changeType: 'positive', icon: 'TrendingUp' },
-          { title: 'AI Manufacturer Rating', value: '88.5', change: '+1.2', changeType: 'positive', icon: 'Star' },
-        ];
-      case 'sr_den':
-        return [
-          { title: 'Sub-Division Projects', value: '18', change: '+2', changeType: 'positive', icon: 'BarChart3' },
-          { title: 'Pending Approvals', value: '8', change: '0', changeType: 'neutral', icon: 'Clock' },
-          { title: 'DEN Performance', value: '91%', change: '+4%', changeType: 'positive', icon: 'Users' },
-          { title: 'AI Insights Score', value: '89.3', change: '+2.8', changeType: 'positive', icon: 'Brain' },
+          { title: 'Division Reports', value: '24', change: '+4 this week', changeType: 'positive', icon: 'BarChart3' },
+          { title: 'User Management', value: '45', change: '12 active users', changeType: 'neutral', icon: 'Users' },
+          { title: 'Schedule & Notifications', value: '18', change: '6 scheduled', changeType: 'neutral', icon: 'Calendar' },
+          { title: 'Performance', value: '92%', change: '+3% this month', changeType: 'positive', icon: 'TrendingUp' },
         ];
       case 'den':
         return [
-          { title: 'Section Approvals', value: '15', change: '+3', changeType: 'positive', icon: 'CheckCircle' },
-          { title: 'Active Tasks', value: '28', change: '+5', changeType: 'positive', icon: 'UserPlus' },
-          { title: 'Inspection Logs', value: baseData.summary.totalInspections.toString(), change: '+12%', changeType: 'positive', icon: 'FileText' },
-          { title: 'Section Performance', value: '87%', change: '+2%', changeType: 'positive', icon: 'Activity' },
+          { title: 'Section Reports', value: '15', change: '+3 this month', changeType: 'positive', icon: 'BarChart3' },
+          { title: 'Sub-Division Reports', value: '8', change: '+2 this week', changeType: 'positive', icon: 'TrendingUp' },
+          { title: 'Inspection Overview', value: '94%', change: '+3% efficiency', changeType: 'positive', icon: 'Eye' },
+          { title: 'Task Assignments', value: '24', change: '6 pending', changeType: 'neutral', icon: 'UserPlus' },
+          { title: 'Inspection Logs', value: '156', change: '+12 today', changeType: 'positive', icon: 'FileText' },
+          { title: 'Approval Requests', value: '8', change: '3 urgent', changeType: 'negative', icon: 'CheckCircle' },
         ];
-      case 'inspector':
-        return [
-          { title: 'Assigned Sections', value: '6', change: '+1', changeType: 'positive', icon: 'MapPin' },
-          { title: 'Inspections Today', value: '8', change: '+2', changeType: 'positive', icon: 'CheckCircle' },
-          { title: 'Products Scanned', value: baseData.summary.totalProducts.toString(), change: '+12', changeType: 'positive', icon: 'QrCode' },
-        ];
-      case 'manufacturer':
-        return [
-          { title: 'Pending Orders', value: '23', change: '+4', changeType: 'positive', icon: 'ShoppingCart' },
-          { title: 'Products Delivered', value: baseData.summary.totalProducts.toString(), change: '+8%', changeType: 'positive', icon: 'Package' },
-          { title: 'AI Performance Score', value: '91.2', change: '+2.3', changeType: 'positive', icon: 'Star' },
-          { title: 'Delivery Rate', value: '94%', change: '-1%', changeType: 'negative', icon: 'Truck' },
-        ];
+
       default:
         return [];
     }
@@ -95,7 +77,7 @@ const Dashboard: React.FC = () => {
         type: 'bar',
         title: user.role === 'admin' ? 'System Activity' : 
                user.role === 'drm' ? 'Division Inspections' :
-               user.role === 'sr_den' ? 'Project Progress' :
+               user.role === 'den' ? 'Section & Sub-Division Analysis' :
                user.role === 'den' ? 'Section Tasks' :
                user.role === 'inspector' ? 'Daily Inspections' :
                'Monthly Orders',
@@ -112,7 +94,7 @@ const Dashboard: React.FC = () => {
         type: 'line',
         title: user.role === 'admin' ? 'System Performance' :
                user.role === 'drm' ? 'Division Performance' :
-               user.role === 'sr_den' ? 'Sub-Division Efficiency' :
+               user.role === 'den' ? 'Combined section and sub-division performance tracking' :
                user.role === 'den' ? 'Section Efficiency' :
                user.role === 'inspector' ? 'Inspection Quality' :
                'Product Performance',
@@ -142,18 +124,39 @@ const Dashboard: React.FC = () => {
     return baseCharts;
   };
 
-  const cards = getCardsForRole();
+  const cards = getDashboardCards();
   const charts = getChartsForRole();
 
-  const getRoleTitle = () => {
-    switch (user.role) {
+  const getRoleTitle = (role: string) => {
+    switch (role) {
       case 'admin': return 'Administrator';
       case 'drm': return 'Divisional Railway Manager';
-      case 'sr_den': return 'Senior Divisional Engineer';
       case 'den': return 'Divisional Engineer';
       case 'inspector': return 'Field Inspector';
       case 'manufacturer': return 'Manufacturer';
       default: return 'User';
+    }
+  };
+
+  const getChartTitle = () => {
+    switch (user?.role) {
+      case 'admin': return 'System Usage Overview';
+      case 'drm': return 'Division Performance';
+      case 'den': return 'Section & Sub-Division Analysis';
+      case 'inspector': return 'Inspection Activity';
+      case 'manufacturer': return 'Production Analytics';
+      default: return 'Analytics';
+    }
+  };
+
+  const getChartSubtitle = () => {
+    switch (user?.role) {
+      case 'admin': return 'Platform-wide metrics and system health indicators';
+      case 'drm': return 'Division-level performance and operational metrics';
+      case 'den': return 'Combined section and sub-division performance tracking';
+      case 'inspector': return 'Field inspection activities and completion rates';
+      case 'manufacturer': return 'Manufacturing output and quality metrics';
+      default: return 'Performance metrics';
     }
   };
 
@@ -164,7 +167,7 @@ const Dashboard: React.FC = () => {
           Welcome back, {user.name}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          {getRoleTitle()} Dashboard
+          {getRoleTitle(user.role)} Dashboard
         </p>
       </div>
 
@@ -193,64 +196,23 @@ const Dashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
         <div className="space-y-4">
           {user.role === 'admin' && [
-            { action: 'User created', item: 'New Inspector Account', time: '2 hours ago' },
-            { action: 'System audit completed', item: 'Blockchain verification', time: '4 hours ago' },
-            { action: 'Report generated', item: 'Monthly system usage', time: '6 hours ago' },
-            { action: 'Role updated', item: 'DEN permissions modified', time: '8 hours ago' },
-          ].map((activity, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{activity.item}</p>
-              </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</span>
-            </div>
-          ))}
-          
+            { action: 'User added', item: 'New inspector account', time: '2 hours ago' },
+            { action: 'System backup', item: 'Automated backup completed', time: '4 hours ago' },
+            { action: 'Security scan', item: 'Vulnerability check passed', time: '6 hours ago' },
+            { action: 'Data export', item: 'Monthly report generated', time: '8 hours ago' },
+          ]}
           {user.role === 'drm' && [
-            { action: 'Division report generated', item: 'Monthly inspection summary', time: '1 hour ago' },
-            { action: 'User added', item: 'New Sr. DEN account', time: '3 hours ago' },
-            { action: 'AI analysis completed', item: 'Manufacturer performance rating', time: '5 hours ago' },
-            { action: 'System monitoring', item: 'Division performance metrics updated', time: '7 hours ago' },
-          ].map((activity, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{activity.item}</p>
-              </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</span>
-            </div>
-          ))}
-
-          {user.role === 'sr_den' && [
-            { action: 'Project approved', item: 'Track modernization - Section A', time: '2 hours ago' },
-            { action: 'DEN request processed', item: 'Budget approval for maintenance', time: '4 hours ago' },
-            { action: 'Inspection reviewed', item: 'Field Inspector report verified', time: '6 hours ago' },
-            { action: 'Sub-division report', item: 'Monthly performance summary', time: '8 hours ago' },
-          ].map((activity, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{activity.item}</p>
-              </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</span>
-            </div>
-          ))}
-
+            { action: 'Report generated', item: 'Weekly division summary', time: '1 hour ago' },
+            { action: 'User approved', item: 'New field inspector', time: '3 hours ago' },
+            { action: 'Schedule updated', item: 'Monthly inspection plan', time: '5 hours ago' },
+            { action: 'Notification sent', item: 'Safety protocol update', time: '7 hours ago' },
+          ]}
           {user.role === 'den' && [
-            { action: 'Task assigned', item: 'Track inspection to AEN Kumar', time: '1 hour ago' },
-            { action: 'Approval granted', item: 'Product request from Inspector', time: '3 hours ago' },
-            { action: 'Inspection log reviewed', item: 'Section A-123 maintenance', time: '5 hours ago' },
-            { action: 'Section report generated', item: 'Weekly status summary', time: '7 hours ago' },
-          ].map((activity, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{activity.item}</p>
-              </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</span>
-            </div>
-          ))}
+            { action: 'Sub-division report', item: 'Weekly efficiency summary', time: '30 minutes ago' },
+            { action: 'Task assigned', item: 'Track inspection - Section A', time: '2 hours ago' },
+            { action: 'Inspection completed', item: 'Signal equipment check', time: '4 hours ago' },
+            { action: 'Approval processed', item: 'Equipment requisition', time: '6 hours ago' },
+          ]}
 
           {user.role === 'inspector' && [
             { action: 'Product scanned', item: 'Rail Joint RJ-456', time: '30 minutes ago' },

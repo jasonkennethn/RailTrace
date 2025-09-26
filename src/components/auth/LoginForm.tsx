@@ -17,8 +17,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onShowSignUp }) => {
   const demoAccounts = [
     { email: 'admin@railway.gov.in', password: 'admin123', role: 'Administrator', description: 'Full system access, user management, audit logs' },
     { email: 'drm@railway.gov.in', password: 'drm123', role: 'DRM', description: 'Division management, reports, approvals' },
-    { email: 'srden@railway.gov.in', password: 'srden123', role: 'Sr. DEN', description: 'Sub-division oversight, inspection management' },
-    { email: 'den@railway.gov.in', password: 'den123', role: 'DEN', description: 'Section management, task assignment, approvals' },
+    { email: 'den@railway.gov.in', password: 'den123', role: 'DEN', description: 'Section management, sub-division oversight, task assignment, approvals' },
     { email: 'inspector@railway.gov.in', password: 'inspector123', role: 'Field Inspector', description: 'Product scanning, inspection recording, field operations' },
     { email: 'manufacturer@railway.gov.in', password: 'mfg123', role: 'Manufacturer', description: 'Product inventory, order management, AI analytics' },
   ];

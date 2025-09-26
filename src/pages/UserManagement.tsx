@@ -26,7 +26,7 @@ const UserManagement: React.FC = () => {
   const roles: { value: UserRole; label: string }[] = [
     { value: 'admin', label: 'Administrator' },
     { value: 'drm', label: 'DRM' },
-    { value: 'sr_den', label: 'Sr. DEN' },
+
     { value: 'den', label: 'DEN' },
     { value: 'inspector', label: 'Inspector' },
     { value: 'manufacturer', label: 'Manufacturer' }
@@ -43,9 +43,8 @@ const UserManagement: React.FC = () => {
     const colors = {
       admin: 'bg-red-100 text-red-800',
       drm: 'bg-blue-100 text-blue-800',
-      sr_den: 'bg-green-100 text-green-800',
-      den: 'bg-yellow-100 text-yellow-800',
-      inspector: 'bg-purple-100 text-purple-800',
+      den: 'bg-green-100 text-green-800',
+      inspector: 'bg-yellow-100 text-yellow-800',
       manufacturer: 'bg-gray-100 text-gray-800'
     };
     return colors[role];

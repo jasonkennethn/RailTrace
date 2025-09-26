@@ -24,7 +24,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onBackToLogin }) => {
   const roles: { value: UserRole; label: string }[] = [
     { value: 'inspector', label: 'Inspector' },
     { value: 'den', label: 'DEN' },
-    { value: 'sr_den', label: 'Sr. DEN' },
     { value: 'drm', label: 'DRM' },
     { value: 'manufacturer', label: 'Manufacturer' }
   ];

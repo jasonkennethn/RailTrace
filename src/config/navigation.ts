@@ -15,15 +15,11 @@ export const navigationItems: NavItem[] = [
   { label: 'Division Reports', path: '/division-reports', icon: 'BarChart3', roles: ['drm'] },
   { label: 'Schedule & Notifications', path: '/schedule-notifications', icon: 'Calendar', roles: ['drm'] },
   
-  // Sr. DEN navigation
-  { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['sr_den'] },
-  { label: 'Sub-Division Reports', path: '/subdivision-reports', icon: 'TrendingUp', roles: ['sr_den'] },
-  { label: 'Inspection Overview', path: '/inspection-overview', icon: 'Eye', roles: ['sr_den'] },
-  { label: 'Approval Requests', path: '/approval-requests', icon: 'CheckCircle', roles: ['sr_den'] },
-  
   // DEN navigation
   { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard', roles: ['den'] },
   { label: 'Section Reports', path: '/section-reports', icon: 'BarChart3', roles: ['den'] },
+  { label: 'Sub-Division Reports', path: '/subdivision-reports', icon: 'TrendingUp', roles: ['den'] },
+  { label: 'Inspection Overview', path: '/inspection-overview', icon: 'Eye', roles: ['den'] },
   { label: 'Assign Tasks', path: '/assign-tasks', icon: 'UserPlus', roles: ['den'] },
   { label: 'Inspection Logs', path: '/inspection-logs', icon: 'FileText', roles: ['den'] },
   { label: 'Approval Requests', path: '/approval-requests', icon: 'CheckCircle', roles: ['den'] },

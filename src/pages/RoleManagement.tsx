@@ -42,12 +42,8 @@ const RoleManagement: React.FC = () => {
       permissions: ['audit_view', 'inspection_approve', 'reports_generate', 'blockchain_view']
     },
     {
-      role: 'sr_den',
-      permissions: ['inspection_approve', 'reports_generate', 'audit_view']
-    },
-    {
       role: 'den',
-      permissions: ['inspection_approve', 'reports_generate']
+      permissions: ['inspection_approve', 'reports_generate', 'audit_view']
     },
     {
       role: 'inspector',
@@ -60,12 +56,94 @@ const RoleManagement: React.FC = () => {
   ];
 
   const roles = [
-    { value: 'admin' as UserRole, label: 'Administrator', color: 'bg-red-100 text-red-800', users: 2 },
-    { value: 'drm' as UserRole, label: 'DRM', color: 'bg-blue-100 text-blue-800', users: 5 },
-    { value: 'sr_den' as UserRole, label: 'Sr. DEN', color: 'bg-green-100 text-green-800', users: 12 },
-    { value: 'den' as UserRole, label: 'DEN', color: 'bg-yellow-100 text-yellow-800', users: 25 },
-    { value: 'inspector' as UserRole, label: 'Inspector', color: 'bg-purple-100 text-purple-800', users: 150 },
-    { value: 'manufacturer' as UserRole, label: 'Manufacturer', color: 'bg-gray-100 text-gray-800', users: 8 }
+    {
+      id: '1',
+      name: 'Administrator',
+      description: 'Full access to all features and data',
+      role: 'admin',
+      permissions: [
+        'user_create',
+        'user_edit',
+        'user_delete',
+        'role_manage',
+        'audit_view',
+        'audit_export',
+        'inspection_create',
+        'inspection_approve',
+        'inventory_manage',
+        'reports_generate',
+        'settings_modify',
+        'blockchain_view'
+      ]
+    },
+    {
+      id: '2',
+      name: 'DRM',
+      description: 'Divisional Regional Manager with overall oversight',
+      role: 'drm',
+      permissions: [
+        'view_section_reports',
+        'view_subdivision_reports',
+        'view_inspection_overview',
+        'assign_tasks',
+        'view_inspection_logs',
+        'manage_approval_requests',
+        'manage_inspectors'
+      ]
+    },
+    {
+      id: '3',
+      name: 'DEN',
+      description: 'Divisional Engineer with section and sub-division oversight',
+      role: 'den',
+      permissions: [
+        'view_section_reports',
+        'view_subdivision_reports',
+        'view_inspection_overview',
+        'assign_tasks',
+        'view_inspection_logs',
+        'manage_approval_requests',
+        'manage_inspectors'
+      ]
+    },
+    {
+      id: '4',
+      name: 'Field Inspector',
+      description: 'Inspectors in the field',
+      role: 'inspector',
+      permissions: [
+        'view_section_reports',
+        'view_subdivision_reports',
+        'view_inspection_overview',
+        'assign_tasks',
+        'view_inspection_logs',
+        'manage_approval_requests',
+        'manage_inspectors'
+      ]
+    },
+    {
+      id: '5',
+      name: 'Manufacturer',
+      description: 'Manufacturers of inspection equipment',
+      role: 'manufacturer',
+      permissions: [
+        'view_section_reports',
+        'view_subdivision_reports',
+        'view_inspection_overview',
+        'assign_tasks',
+        'view_inspection_logs',
+        'manage_approval_requests',
+        'manage_inspectors'
+      ]
+    }
+  ];
+
+  const roleStats = [
+    { value: 'admin' as UserRole, label: 'Administrator', color: 'bg-red-100 text-red-800', users: 3 },
+    { value: 'drm' as UserRole, label: 'DRM', color: 'bg-blue-100 text-blue-800', users: 8 },
+    { value: 'den' as UserRole, label: 'DEN', color: 'bg-green-100 text-green-800', users: 18 },
+    { value: 'inspector' as UserRole, label: 'Field Inspector', color: 'bg-purple-100 text-purple-800', users: 45 },
+    { value: 'manufacturer' as UserRole, label: 'Manufacturer', color: 'bg-orange-100 text-orange-800', users: 12 },
   ];
 
   const getCurrentRolePermissions = () => {

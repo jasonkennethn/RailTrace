@@ -41,7 +41,7 @@ const ScheduleNotifications: React.FC = () => {
         priority: 'high',
         date: new Date('2024-01-30T17:00:00'),
         status: 'pending',
-        assignedTo: 'Sr. DEN Mumbai'
+        assignedTo: 'DEN Mumbai'
       },
       {
         id: '3',

@@ -1,5 +1,5 @@
 // User roles and permissions
-export type UserRole = 'admin' | 'drm' | 'sr_den' | 'den' | 'inspector' | 'manufacturer';
+export type UserRole = 'admin' | 'drm' | 'den' | 'inspector' | 'manufacturer';
 
 export interface User {
   id: string;
