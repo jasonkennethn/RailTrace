@@ -638,6 +638,116 @@ export class TasksService {
   }
 }
 
+// Roles Service
+export class RolesService {
+  private static collectionName = 'roles';
+  
+  static async getRoles(): Promise<any[]> {
+    try {
+      const querySnapshot = await getDocs(collection(db, this.collectionName));
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      }));
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      return this.getDemoRoles();
+    }
+  }
+
+  static async addRole(roleData: any): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, this.collectionName), {
+        ...roleData,
+        createdAt: serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding role:', error);
+      throw new Error('Failed to add role');
+    }
+  }
+
+  static subscribeToRoles(callback: (roles: any[]) => void): () => void {
+    try {
+      return onSnapshot(collection(db, this.collectionName), (snapshot) => {
+        const roles = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+        }));
+        callback(roles);
+      });
+    } catch (error) {
+      console.error('Error subscribing to roles:', error);
+      callback(this.getDemoRoles());
+      return () => {};
+    }
+  }
+
+  private static getDemoRoles(): any[] {
+    return [
+      {
+        id: '1',
+        name: 'Administrator',
+        description: 'Full access to all features and data',
+        role: 'admin',
+        permissions: [
+          'user_create', 'user_edit', 'user_delete', 'role_manage',
+          'audit_view', 'audit_export', 'inspection_create', 'inspection_approve',
+          'inventory_manage', 'reports_generate', 'settings_modify', 'blockchain_view'
+        ],
+        createdAt: new Date('2024-01-15')
+      },
+      {
+        id: '2',
+        name: 'DRM',
+        description: 'Divisional Regional Manager with overall oversight',
+        role: 'drm',
+        permissions: [
+          'view_section_reports', 'view_subdivision_reports', 'view_inspection_overview',
+          'assign_tasks', 'view_inspection_logs', 'manage_approval_requests', 'manage_inspectors'
+        ],
+        createdAt: new Date('2024-01-15')
+      },
+      {
+        id: '3',
+        name: 'DEN',
+        description: 'Divisional Engineer with section and sub-division oversight',
+        role: 'den',
+        permissions: [
+          'view_section_reports', 'view_subdivision_reports', 'view_inspection_overview',
+          'assign_tasks', 'view_inspection_logs', 'manage_approval_requests', 'manage_inspectors'
+        ],
+        createdAt: new Date('2024-01-15')
+      },
+      {
+        id: '4',
+        name: 'Field Inspector',
+        description: 'Inspectors in the field',
+        role: 'inspector',
+        permissions: [
+          'view_section_reports', 'view_subdivision_reports', 'view_inspection_overview',
+          'assign_tasks', 'view_inspection_logs', 'manage_approval_requests', 'manage_inspectors'
+        ],
+        createdAt: new Date('2024-01-15')
+      },
+      {
+        id: '5',
+        name: 'Manufacturer',
+        description: 'Manufacturers of inspection equipment',
+        role: 'manufacturer',
+        permissions: [
+          'view_section_reports', 'view_subdivision_reports', 'view_inspection_overview',
+          'assign_tasks', 'view_inspection_logs', 'manage_approval_requests', 'manage_inspectors'
+        ],
+        createdAt: new Date('2024-01-15')
+      }
+    ];
+  }
+}
+
 // Audit Logs Service
 export class AuditLogsService {
   private static collectionName = 'auditLogs';

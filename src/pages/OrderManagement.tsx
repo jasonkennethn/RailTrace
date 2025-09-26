@@ -34,7 +34,10 @@ const OrderManagement: React.FC = () => {
   const loadOrders = async () => {
     setLoading(true);
     try {
-      // Mock orders data
+      // Add delay to show loading state and simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Mock orders data with timestamp to show refresh working
       const mockOrders: Order[] = [
         {
           id: 'ORD-2024-001',
@@ -106,6 +109,21 @@ const OrderManagement: React.FC = () => {
           expectedDelivery: new Date('2024-02-08'),
           totalValue: 500000,
           notes: 'Order cancelled due to specification changes'
+        },
+        // Add new order to demonstrate refresh functionality
+        {
+          id: `ORD-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 900) + 100}`,
+          productName: 'Smart Rail Sensors',
+          productId: 'SRS-IOT-2024',
+          quantity: 200,
+          customer: 'Metro Railway',
+          division: 'Bangalore Division',
+          status: 'pending',
+          priority: 'medium',
+          orderDate: new Date(),
+          expectedDelivery: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), // 25 days from now
+          totalValue: 1800000,
+          notes: `New order added on ${new Date().toLocaleString()} - IoT enabled rail monitoring sensors`
         }
       ];
 

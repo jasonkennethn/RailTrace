@@ -23,8 +23,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check if user's role is in the allowed roles
   if (!allowedRoles.includes(user.role)) {
-    // Redirect to unauthorized page
-    return <Navigate to="/unauthorized" replace />;
+    // Always redirect to dashboard instead of unauthorized page to prevent errors
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

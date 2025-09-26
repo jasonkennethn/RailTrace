@@ -196,7 +196,7 @@ const Reports: React.FC = () => {
 
       {/* Report Controls */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
             <div className="relative">
@@ -229,7 +229,7 @@ const Reports: React.FC = () => {
               </select>
             </div>
           </div>
-          <div className="lg:col-span-2 flex items-end space-x-4">
+          <div className="flex items-end space-x-4">
             <button
               onClick={generateReport}
               className="flex-1 bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"

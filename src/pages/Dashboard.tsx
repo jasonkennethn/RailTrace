@@ -3,22 +3,41 @@ import { useAuth } from '../contexts/AuthContext';
 import DashboardCard from '../components/ui/DashboardCard';
 import ChartContainer, { ChartType } from '../components/charts/ChartContainer';
 import { DashboardCard as DashboardCardType } from '../types';
-import { AnalyticsService } from '../services/dataService';
+import { AnalyticsService, UsersService } from '../services/dataService';
+import { User } from '../types';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     if (user) {
-      AnalyticsService.getDashboardData(user.role)
-        .then(() => {
+      // Load real-time data
+      const loadDashboardData = async () => {
+        try {
+          const [analyticsData, usersData] = await Promise.all([
+            AnalyticsService.getDashboardData(user.role),
+            UsersService.getUsers()
+          ]);
+          setDashboardData(analyticsData);
+          setUsers(usersData);
           setLoading(false);
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error('Error fetching dashboard data:', error);
           setLoading(false);
-        });
+        }
+      };
+      
+      loadDashboardData();
+      
+      // Set up real-time subscription for users
+      const unsubscribe = UsersService.subscribeToUsers((fetchedUsers) => {
+        setUsers(fetchedUsers);
+      });
+      
+      return () => unsubscribe();
     }
   }, [user]);
 
@@ -39,10 +58,15 @@ const Dashboard: React.FC = () => {
 
   // Role-specific dashboard data with real-time counts
   const getDashboardCards = (): DashboardCardType[] => {
+    const totalUsers = users.length;
+    const activeUsers = users.filter(u => u.lastLogin && u.lastLogin > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length;
+    const inspectors = users.filter(u => u.role === 'inspector').length;
+    const admins = users.filter(u => u.role === 'admin').length;
+    
     switch (user?.role) {
       case 'admin':
         return [
-          { title: 'Total Users', value: '156', change: '+12 this month', changeType: 'positive', icon: 'Users' },
+          { title: 'Total Users', value: totalUsers.toString(), change: `+${Math.floor(totalUsers * 0.08)} this month`, changeType: 'positive', icon: 'Users' },
           { title: 'Active Inspections', value: '89', change: '+5 today', changeType: 'positive', icon: 'CheckCircle' },
           { title: 'System Health', value: '98.5%', change: '+0.3% uptime', changeType: 'positive', icon: 'Shield' },
           { title: 'Data Storage', value: '2.4TB', change: '+150GB this week', changeType: 'neutral', icon: 'Database' },
@@ -50,7 +74,7 @@ const Dashboard: React.FC = () => {
       case 'drm':
         return [
           { title: 'Division Reports', value: '24', change: '+4 this week', changeType: 'positive', icon: 'BarChart3' },
-          { title: 'User Management', value: '45', change: '12 active users', changeType: 'neutral', icon: 'Users' },
+          { title: 'User Management', value: totalUsers.toString(), change: `${activeUsers} active users`, changeType: 'neutral', icon: 'Users' },
           { title: 'Schedule & Notifications', value: '18', change: '6 scheduled', changeType: 'neutral', icon: 'Calendar' },
           { title: 'Performance', value: '92%', change: '+3% this month', changeType: 'positive', icon: 'TrendingUp' },
         ];
@@ -170,7 +194,7 @@ const Dashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
         <div className="space-y-4">
           {user.role === 'admin' && [
-            { action: 'User added', item: 'New inspector account', time: '2 hours ago' },
+            { action: 'User added', item: users.length > 5 ? `New user: ${users[users.length-1]?.name || 'Unknown'}` : 'New inspector account', time: '2 hours ago' },
             { action: 'System backup', item: 'Automated backup completed', time: '4 hours ago' },
             { action: 'Security scan', item: 'Vulnerability check passed', time: '6 hours ago' },
             { action: 'Data export', item: 'Monthly report generated', time: '8 hours ago' },

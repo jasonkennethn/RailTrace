@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Users, Settings, Eye, Edit, Plus } from 'lucide-react';
 import { UserRole } from '../types';
+import { UsersService, RolesService } from '../services/dataService';
 
 interface Permission {
   id: string;
@@ -24,6 +25,26 @@ const RoleManagement: React.FC = () => {
     description: '',
     permissions: [] as string[]
   });
+  const [roles, setRoles] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Real-time subscriptions
+  useEffect(() => {
+    const unsubscribeRoles = RolesService.subscribeToRoles((fetchedRoles) => {
+      setRoles(fetchedRoles);
+      setLoading(false);
+    });
+
+    const unsubscribeUsers = UsersService.subscribeToUsers((fetchedUsers) => {
+      setUsers(fetchedUsers);
+    });
+
+    return () => {
+      unsubscribeRoles();
+      unsubscribeUsers();
+    };
+  }, []);
 
   const permissions: Permission[] = [
     { id: 'user_create', name: 'Create Users', description: 'Create new user accounts', category: 'User Management' },
@@ -63,95 +84,13 @@ const RoleManagement: React.FC = () => {
     }
   ];
 
-  const roles = [
-    {
-      id: '1',
-      name: 'Administrator',
-      description: 'Full access to all features and data',
-      role: 'admin',
-      permissions: [
-        'user_create',
-        'user_edit',
-        'user_delete',
-        'role_manage',
-        'audit_view',
-        'audit_export',
-        'inspection_create',
-        'inspection_approve',
-        'inventory_manage',
-        'reports_generate',
-        'settings_modify',
-        'blockchain_view'
-      ]
-    },
-    {
-      id: '2',
-      name: 'DRM',
-      description: 'Divisional Regional Manager with overall oversight',
-      role: 'drm',
-      permissions: [
-        'view_section_reports',
-        'view_subdivision_reports',
-        'view_inspection_overview',
-        'assign_tasks',
-        'view_inspection_logs',
-        'manage_approval_requests',
-        'manage_inspectors'
-      ]
-    },
-    {
-      id: '3',
-      name: 'DEN',
-      description: 'Divisional Engineer with section and sub-division oversight',
-      role: 'den',
-      permissions: [
-        'view_section_reports',
-        'view_subdivision_reports',
-        'view_inspection_overview',
-        'assign_tasks',
-        'view_inspection_logs',
-        'manage_approval_requests',
-        'manage_inspectors'
-      ]
-    },
-    {
-      id: '4',
-      name: 'Field Inspector',
-      description: 'Inspectors in the field',
-      role: 'inspector',
-      permissions: [
-        'view_section_reports',
-        'view_subdivision_reports',
-        'view_inspection_overview',
-        'assign_tasks',
-        'view_inspection_logs',
-        'manage_approval_requests',
-        'manage_inspectors'
-      ]
-    },
-    {
-      id: '5',
-      name: 'Manufacturer',
-      description: 'Manufacturers of inspection equipment',
-      role: 'manufacturer',
-      permissions: [
-        'view_section_reports',
-        'view_subdivision_reports',
-        'view_inspection_overview',
-        'assign_tasks',
-        'view_inspection_logs',
-        'manage_approval_requests',
-        'manage_inspectors'
-      ]
-    }
-  ];
-
+  // Calculate role statistics dynamically based on real users data
   const roleStats = [
-    { value: 'admin' as UserRole, label: 'Administrator', color: 'bg-red-100 text-red-800', users: 3 },
-    { value: 'drm' as UserRole, label: 'DRM', color: 'bg-blue-100 text-blue-800', users: 8 },
-    { value: 'den' as UserRole, label: 'DEN', color: 'bg-green-100 text-green-800', users: 18 },
-    { value: 'inspector' as UserRole, label: 'Field Inspector', color: 'bg-purple-100 text-purple-800', users: 45 },
-    { value: 'manufacturer' as UserRole, label: 'Manufacturer', color: 'bg-orange-100 text-orange-800', users: 12 },
+    { value: 'admin' as UserRole, label: 'Administrator', color: 'bg-red-100 text-red-800', users: users.filter(u => u.role === 'admin').length },
+    { value: 'drm' as UserRole, label: 'DRM', color: 'bg-blue-100 text-blue-800', users: users.filter(u => u.role === 'drm').length },
+    { value: 'den' as UserRole, label: 'DEN', color: 'bg-green-100 text-green-800', users: users.filter(u => u.role === 'den').length },
+    { value: 'inspector' as UserRole, label: 'Field Inspector', color: 'bg-purple-100 text-purple-800', users: users.filter(u => u.role === 'inspector').length },
+    { value: 'manufacturer' as UserRole, label: 'Manufacturer', color: 'bg-orange-100 text-orange-800', users: users.filter(u => u.role === 'manufacturer').length },
   ];
 
   const getCurrentRolePermissions = () => {
@@ -173,20 +112,31 @@ const RoleManagement: React.FC = () => {
     return getCurrentRolePermissions().includes(permissionId);
   };
 
-  const handleAddRole = () => {
+  const handleAddRole = async () => {
     if (!newRole.name || !newRole.description) {
       alert('Please fill in all required fields.');
       return;
     }
 
-    console.log('Adding new role:', newRole);
-    setShowAddRoleModal(false);
-    setNewRole({
-      name: '',
-      description: '',
-      permissions: []
-    });
-    alert('Role added successfully! (This is a demo - no actual role was created)');
+    try {
+      await RolesService.addRole({
+        name: newRole.name,
+        description: newRole.description,
+        permissions: newRole.permissions,
+        role: newRole.name.toLowerCase().replace(/\s+/g, '_') // Generate role key from name
+      });
+      
+      setShowAddRoleModal(false);
+      setNewRole({
+        name: '',
+        description: '',
+        permissions: []
+      });
+      alert('Role added successfully!');
+    } catch (error) {
+      console.error('Error adding role:', error);
+      alert('Failed to add role. Please try again.');
+    }
   };
 
   const handleEditPermissions = () => {
@@ -231,9 +181,6 @@ const RoleManagement: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Roles</h2>
-            <button className="bg-blue-800 hover:bg-blue-900 text-white p-2 rounded-lg transition-colors">
-              <Plus className="h-4 w-4" />
-            </button>
           </div>
           <div className="space-y-3">
             {roleStats.map((rolestat) => (
@@ -337,7 +284,7 @@ const RoleManagement: React.FC = () => {
             <div>
               <p className="text-sm text-gray-600">Total Users</p>
               <p className="text-2xl font-bold text-gray-900">
-                {roleStats.reduce((sum, rolestat) => sum + rolestat.users, 0)}
+                {users.length}
               </p>
             </div>
             <Users className="h-8 w-8 text-green-600" />

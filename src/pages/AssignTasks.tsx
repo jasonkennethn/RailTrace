@@ -26,6 +26,8 @@ const AssignTasks: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [newTask, setNewTask] = useState<Partial<Task>>({
     title: '',
@@ -305,7 +307,13 @@ const AssignTasks: React.FC = () => {
                     Complete
                   </button>
                 )}
-                <button className="flex-1 bg-gray-100 dark:bg-dark-700 hover:bg-gray-200 dark:hover:bg-dark-600 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                <button 
+                  onClick={() => {
+                    setSelectedTask(task);
+                    setShowDetailsModal(true);
+                  }}
+                  className="flex-1 bg-gray-100 dark:bg-dark-700 hover:bg-gray-200 dark:hover:bg-dark-600 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                >
                   View Details
                 </button>
               </div>
@@ -465,6 +473,161 @@ const AssignTasks: React.FC = () => {
                   className="flex-1 bg-gray-300 dark:bg-dark-600 hover:bg-gray-400 dark:hover:bg-dark-500 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-medium transition-colors"
                 >
                   Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Details Modal */}
+      {showDetailsModal && selectedTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-dark-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-dark-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Task Details</h2>
+                <button
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    setSelectedTask(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Task Header */}
+              <div className="bg-gray-50 dark:bg-dark-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedTask.title}</h3>
+                  <div className="flex items-center space-x-2">
+                    <span className={clsx(
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                      getPriorityColor(selectedTask.priority)
+                    )}>
+                      {selectedTask.priority.toUpperCase()} PRIORITY
+                    </span>
+                    <span className={clsx(
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                      getStatusColor(selectedTask.status)
+                    )}>
+                      {selectedTask.status.replace('_', ' ').toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                  {getTypeIcon(selectedTask.type)}
+                  <span className="capitalize">{selectedTask.type}</span>
+                  <span>•</span>
+                  <span>Task ID: {selectedTask.id}</span>
+                </div>
+              </div>
+
+              {/* Task Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                    <div className="bg-gray-50 dark:bg-dark-700 rounded-lg p-3">
+                      <p className="text-gray-900 dark:text-white">{selectedTask.description || 'No description provided'}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned To</label>
+                    <div className="flex items-center space-x-2">
+                      <UserPlus className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{selectedTask.assignedTo}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500">{selectedTask.assignedToRole}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</label>
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <p className="text-gray-900 dark:text-white">{selectedTask.section}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <p className="text-gray-900 dark:text-white">{selectedTask.dueDate.toLocaleDateString()}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estimated Hours</label>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <p className="text-gray-900 dark:text-white">{selectedTask.estimatedHours} hours</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created Date</label>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <p className="text-gray-900 dark:text-white">{selectedTask.createdDate.toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes Section */}
+              {selectedTask.notes && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <p className="text-gray-900 dark:text-white">{selectedTask.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4 pt-4 border-t border-gray-200 dark:border-dark-700">
+                {selectedTask.status === 'assigned' && (
+                  <button
+                    onClick={() => {
+                      updateTaskStatus(selectedTask.id, 'in_progress');
+                      setShowDetailsModal(false);
+                      setSelectedTask(null);
+                    }}
+                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                  >
+                    Start Task
+                  </button>
+                )}
+                {selectedTask.status === 'in_progress' && (
+                  <button
+                    onClick={() => {
+                      updateTaskStatus(selectedTask.id, 'completed');
+                      setShowDetailsModal(false);
+                      setSelectedTask(null);
+                    }}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                  >
+                    Mark Complete
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    setSelectedTask(null);
+                  }}
+                  className="flex-1 bg-gray-300 dark:bg-dark-600 hover:bg-gray-400 dark:hover:bg-dark-500 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-medium transition-colors"
+                >
+                  Close
                 </button>
               </div>
             </div>

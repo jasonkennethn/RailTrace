@@ -33,6 +33,7 @@ const ProductDetails: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<ProductDetail | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [productHistory, setProductHistory] = useState<{[key: string]: ProductDetail[]}>({});
 
   useEffect(() => {
     loadProducts();
@@ -128,11 +129,30 @@ const ProductDetails: React.FC = () => {
 
   const handleSave = () => {
     if (editingProduct) {
+      // Save current product state to history before updating
+      const currentProduct = products.find(p => p.id === editingProduct.id);
+      if (currentProduct) {
+        setProductHistory(prev => ({
+          ...prev,
+          [editingProduct.id]: [
+            ...(prev[editingProduct.id] || []),
+            { ...currentProduct, modifiedDate: new Date() }
+          ]
+        }));
+      }
+      
+      // Update the product with new details while preserving history
+      const updatedProduct = {
+        ...editingProduct,
+        lastModified: new Date()
+      };
+      
       setProducts(products.map(p => 
-        p.id === editingProduct.id ? editingProduct : p
+        p.id === editingProduct.id ? updatedProduct : p
       ));
+      
       if (selectedProduct?.id === editingProduct.id) {
-        setSelectedProduct(editingProduct);
+        setSelectedProduct(updatedProduct);
       }
       setEditingProduct(null);
     }
