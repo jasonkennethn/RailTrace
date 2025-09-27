@@ -23,6 +23,10 @@ interface ApprovalRequest {
   deliveryScore?: number;
   costScore?: number;
   overallScore?: number;
+  approvedBy?: string;
+  approvedAt?: Date;
+  warrantyExpiry?: Date;
+  estimatedDelivery?: Date;
 }
 
 const ApprovalRequests: React.FC = () => {
@@ -58,13 +62,41 @@ const ApprovalRequests: React.FC = () => {
     );
   }
 
-  const handleApproval = (requestId: string, action: 'approve' | 'reject') => {
-    setRequests(requests.map(req => 
-      req.id === requestId 
-        ? { ...req, status: action === 'approve' ? 'approved' : 'rejected' }
-        : req
-    ));
-    setSelectedRequest(null);
+  const handleApproval = async (requestId: string, action: 'approve' | 'reject') => {
+    try {
+      const targetRequest = requests.find(req => req.id === requestId);
+      if (!targetRequest) return;
+
+      // Calculate warranty expiry and delivery estimates for approved product/maintenance requests
+      const updates: Partial<ApprovalRequest> = {
+        status: action === 'approve' ? 'approved' : 'rejected'
+      };
+
+      if (action === 'approve' && (targetRequest.type === 'product' || targetRequest.type === 'maintenance')) {
+        // Calculate warranty expiry based on product type and priority
+        const baseWarrantyDays = targetRequest.type === 'product' ? 365 : 180; // 1 year for products, 6 months for maintenance
+        const priorityMultiplier = targetRequest.priority === 'high' ? 1.5 : targetRequest.priority === 'medium' ? 1.2 : 1.0;
+        const warrantyDays = Math.floor(baseWarrantyDays * priorityMultiplier);
+        
+        updates.warrantyExpiry = new Date(Date.now() + warrantyDays * 24 * 60 * 60 * 1000);
+        
+        // Calculate estimated delivery (1-4 weeks based on priority)
+        const deliveryDays = targetRequest.priority === 'high' ? 7 : targetRequest.priority === 'medium' ? 14 : 28;
+        updates.estimatedDelivery = new Date(Date.now() + deliveryDays * 24 * 60 * 60 * 1000);
+      }
+
+      // Update via service (this will handle persistence)
+      await ApprovalRequestsService.updateApprovalRequest(requestId, updates, user?.name);
+      
+      // Close modal if it was the selected request
+      if (selectedRequest?.id === requestId) {
+        setSelectedRequest(null);
+      }
+      
+    } catch (error) {
+      console.error('Error updating approval request:', error);
+      alert('Failed to update request status. Please try again.');
+    }
   };
 
   const filteredRequests = requests.filter(req => {
@@ -364,6 +396,18 @@ const ApprovalRequests: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Created Date</label>
                   <p className="text-gray-900">{selectedRequest.createdAt.toLocaleDateString()}</p>
                 </div>
+                {selectedRequest.approvedAt && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Approved Date</label>
+                    <p className="text-gray-900">{selectedRequest.approvedAt.toLocaleDateString()}</p>
+                  </div>
+                )}
+                {selectedRequest.approvedBy && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Approved By</label>
+                    <p className="text-gray-900">{selectedRequest.approvedBy}</p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -405,6 +449,39 @@ const ApprovalRequests: React.FC = () => {
                         <div className="text-center">
                           <div className="text-lg font-bold text-purple-600">{selectedRequest.costScore.toFixed(1)}</div>
                           <p className="text-xs text-gray-600">Cost Efficiency</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Warranty and Delivery Information for Approved Requests */}
+              {selectedRequest.status === 'approved' && (selectedRequest.warrantyExpiry || selectedRequest.estimatedDelivery) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <CheckCircle className="h-4 w-4 inline mr-1 text-green-500" />
+                    Approval Details
+                  </label>
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedRequest.estimatedDelivery && (
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-green-600">
+                            {selectedRequest.estimatedDelivery.toLocaleDateString()}
+                          </div>
+                          <p className="text-xs text-gray-600">Estimated Delivery</p>
+                        </div>
+                      )}
+                      {selectedRequest.warrantyExpiry && (
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-blue-600">
+                            {selectedRequest.warrantyExpiry.toLocaleDateString()}
+                          </div>
+                          <p className="text-xs text-gray-600">Warranty Expiry</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            ({Math.ceil((selectedRequest.warrantyExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days remaining)
+                          </p>
                         </div>
                       )}
                     </div>

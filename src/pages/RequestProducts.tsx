@@ -96,8 +96,22 @@ const RequestProducts: React.FC = () => {
       );
 
       if (validRequests.length === 0) {
-        alert('Please fill in at least one complete product request.');
+        alert('Please fill in at least one complete product request with all required fields.');
+        setIsSubmitting(false);
         return;
+      }
+
+      // Check for incomplete requests
+      const incompleteRequests = requests.filter(req => 
+        !req.productName || !req.section || !req.justification
+      );
+      
+      if (incompleteRequests.length > 0) {
+        const proceed = confirm(`${incompleteRequests.length} request(s) are incomplete and will be excluded. Continue with ${validRequests.length} complete request(s)?`);
+        if (!proceed) {
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       // Create a combined approval request for all products
@@ -139,8 +153,8 @@ const RequestProducts: React.FC = () => {
       // Submit to approval system
       await ApprovalRequestsService.addApprovalRequest(approvalRequestData);
 
-      // Simulate local submission for UI purposes
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Simulate processing time for better UX
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       const newSubmission: SubmittedRequest = {
         id: `REQ-${Date.now()}`,
@@ -153,7 +167,7 @@ const RequestProducts: React.FC = () => {
       setSubmittedRequests([newSubmission, ...submittedRequests]);
       setShowSuccess(true);
 
-      // Reset form
+      // Reset form only after successful submission
       setRequests([
         {
           productName: '',
@@ -167,11 +181,9 @@ const RequestProducts: React.FC = () => {
         }
       ]);
 
-      setTimeout(() => setShowSuccess(false), 3000);
-
     } catch (error) {
       console.error('Error submitting request:', error);
-      alert('Failed to submit request. Please try again.');
+      alert('Failed to submit request. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -208,6 +220,7 @@ const RequestProducts: React.FC = () => {
   };
 
   if (showSuccess) {
+    const lastSubmission = submittedRequests[0];
     return (
       <div className="p-4 sm:p-6 max-w-4xl mx-auto">
         <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-8 shadow-sm text-center">
@@ -218,12 +231,38 @@ const RequestProducts: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Your product request has been submitted to the DEN for approval and will appear in their approval requests dashboard.
           </p>
-          <button
-            onClick={() => setShowSuccess(false)}
-            className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-          >
-            Submit Another Request
-          </button>
+          
+          {/* Submission Details */}
+          {lastSubmission && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+              <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-3">Submission Details</h3>
+              <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                <p><strong>Request ID:</strong> {lastSubmission.id}</p>
+                <p><strong>Products Requested:</strong> {lastSubmission.products.length}</p>
+                <p><strong>Total Estimated Cost:</strong> ₹{lastSubmission.totalCost.toLocaleString()}</p>
+                <p><strong>Status:</strong> <span className="capitalize">{lastSubmission.status}</span></p>
+                <p><strong>Submitted:</strong> {lastSubmission.submittedDate.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => setShowSuccess(false)}
+              className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            >
+              Submit Another Request
+            </button>
+            <button
+              onClick={() => {
+                setShowSuccess(false);
+                // Navigate to approval requests page if needed
+              }}
+              className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-semibold py-2 px-6 rounded-lg transition-colors"
+            >
+              View All Requests
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -293,13 +332,15 @@ const RequestProducts: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Product Name
+                          Product Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           value={request.productName}
                           onChange={(e) => updateRequest(index, 'productName', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white transition-colors ${
+                            request.productName ? 'border-gray-300 dark:border-dark-600' : 'border-red-300 dark:border-red-600'
+                          }`}
                           placeholder="Enter product name"
                           required
                         />
@@ -352,7 +393,7 @@ const RequestProducts: React.FC = () => {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Section
+                          Section <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                           <MapPin className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
@@ -360,7 +401,9 @@ const RequestProducts: React.FC = () => {
                             type="text"
                             value={request.section}
                             onChange={(e) => updateRequest(index, 'section', e.target.value)}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                            className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white transition-colors ${
+                              request.section ? 'border-gray-300 dark:border-dark-600' : 'border-red-300 dark:border-red-600'
+                            }`}
                             placeholder="e.g., Section A-123"
                             required
                           />
@@ -398,13 +441,15 @@ const RequestProducts: React.FC = () => {
 
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Justification
+                          Justification <span className="text-red-500">*</span>
                         </label>
                         <textarea
                           value={request.justification}
                           onChange={(e) => updateRequest(index, 'justification', e.target.value)}
                           rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white transition-colors ${
+                            request.justification ? 'border-gray-300 dark:border-dark-600' : 'border-red-300 dark:border-red-600'
+                          }`}
                           placeholder="Explain why this product is needed..."
                           required
                         />
@@ -415,14 +460,40 @@ const RequestProducts: React.FC = () => {
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-dark-600">
+                {/* Form Validation Summary */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Submission Checklist:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {requests.map((request, index) => {
+                      const isComplete = request.productName && request.section && request.justification;
+                      return (
+                        <div key={index} className="flex items-center space-x-2">
+                          {isComplete ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                          )}
+                          <span className={`text-sm ${
+                            isComplete
+                              ? 'text-green-600 dark:text-green-400' 
+                              : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            Request #{index + 1}: {isComplete ? 'Complete' : 'Incomplete'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     Total Estimated Cost: ₹{requests.reduce((sum, req) => sum + req.estimatedCost, 0).toLocaleString()}
                   </div>
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center space-x-2"
+                    disabled={isSubmitting || requests.every(req => !req.productName || !req.section || !req.justification)}
+                    className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center space-x-2"
                   >
                     {isSubmitting ? (
                       <>

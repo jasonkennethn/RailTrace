@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Calendar, MapPin, CheckCircle, Clock, AlertTriangle, Plus, Search, Filter } from 'lucide-react';
+import { UserPlus, Calendar, MapPin, CheckCircle, Clock, AlertTriangle, Plus, Search, Filter, ChevronDown } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { TasksService } from '../services/dataService';
+import { TasksService, UsersService } from '../services/dataService';
 import clsx from 'clsx';
 
 interface Task {
@@ -23,32 +23,45 @@ interface Task {
 const AssignTasks: React.FC = () => {
   const { theme } = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
   const [newTask, setNewTask] = useState<Partial<Task>>({
     title: '',
     description: '',
     type: 'inspection',
     priority: 'medium',
     assignedTo: '',
-    assignedToRole: 'AEN',
+    assignedToRole: 'Field Inspector',
     section: '',
     dueDate: new Date(),
     estimatedHours: 8
   });
 
   useEffect(() => {
-    // Real-time data subscription
-    const unsubscribe = TasksService.subscribeToTasks((fetchedTasks) => {
+    // Real-time data subscription for tasks
+    const unsubscribeTasks = TasksService.subscribeToTasks((fetchedTasks) => {
       setTasks(fetchedTasks);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Real-time data subscription for users (field inspectors)
+    const unsubscribeUsers = UsersService.subscribeToUsers((fetchedUsers) => {
+      // Filter to only show field inspectors
+      const fieldInspectors = fetchedUsers.filter(user => user.role === 'inspector');
+      setUsers(fieldInspectors);
+    });
+
+    return () => {
+      unsubscribeTasks();
+      unsubscribeUsers();
+    };
   }, []);
 
   if (loading) {
@@ -84,18 +97,25 @@ const AssignTasks: React.FC = () => {
         // Add task using the TasksService
         await TasksService.addTask(task);
         console.log('Task created successfully');
+        
+        // Close modal and reset form immediately
         setShowCreateModal(false);
+        setShowUserDropdown(false);
+        setUserSearch('');
         setNewTask({
           title: '',
           description: '',
           type: 'inspection',
           priority: 'medium',
           assignedTo: '',
-          assignedToRole: 'AEN',
+          assignedToRole: 'Field Inspector',
           section: '',
           dueDate: new Date(),
-          estimatedHours: 8
+          estimatedHours: 8,
+          notes: ''
         });
+        
+        alert('Task created successfully!');
       } catch (error) {
         console.error('Error creating task:', error);
         alert('Failed to create task. Please try again.');
@@ -109,6 +129,18 @@ const AssignTasks: React.FC = () => {
     setTasks(tasks.map(task => 
       task.id === taskId ? { ...task, status: newStatus } : task
     ));
+  };
+
+  // Filter users based on search term
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+    user.email.toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  const selectUser = (user: any) => {
+    setNewTask({ ...newTask, assignedTo: user.name });
+    setShowUserDropdown(false);
+    setUserSearch('');
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -392,24 +424,66 @@ const AssignTasks: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign To</label>
-                  <input
-                    type="text"
-                    value={newTask.assignedTo}
-                    onChange={(e) => setNewTask({ ...newTask, assignedTo: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
-                    placeholder="Enter assignee name"
-                  />
+                  <div className="relative">
+                    <div 
+                      onClick={() => setShowUserDropdown(!showUserDropdown)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white cursor-pointer flex items-center justify-between"
+                    >
+                      <span className={newTask.assignedTo ? 'text-gray-900 dark:text-white' : 'text-gray-500'}>
+                        {newTask.assignedTo || 'Select Field Inspector'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                    
+                    {showUserDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <div className="p-2">
+                          <input
+                            type="text"
+                            placeholder="Search inspectors..."
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto">
+                          {filteredUsers.length > 0 ? (
+                            filteredUsers.map((user) => (
+                              <div
+                                key={user.id}
+                                onClick={() => selectUser(user)}
+                                className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-600 cursor-pointer flex items-center space-x-2"
+                              >
+                                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-full w-8 h-8 flex items-center justify-center">
+                                  <span className="text-white font-semibold text-xs">
+                                    {user.name.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="font-medium text-gray-900 dark:text-white text-sm">{user.name}</p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">{user.email}</p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-gray-500 dark:text-gray-400 text-sm">
+                              No field inspectors found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
-                  <select
-                    value={newTask.assignedToRole}
-                    onChange={(e) => setNewTask({ ...newTask, assignedToRole: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-dark-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="AEN">AEN</option>
-                    <option value="Inspector">Inspector</option>
-                  </select>
+                  <input
+                    type="text"
+                    value="Field Inspector"
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed"
+                  />
                 </div>
               </div>
 

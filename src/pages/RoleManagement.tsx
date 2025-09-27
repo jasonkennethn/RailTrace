@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Settings, Eye, Edit, Plus } from 'lucide-react';
+import { Shield, Users, Settings, Eye, Edit, Plus, Trash2 } from 'lucide-react';
 import { UserRole } from '../types';
 import { UsersService, RolesService } from '../services/dataService';
 
@@ -146,16 +146,30 @@ const RoleManagement: React.FC = () => {
         role: newRole.name.toLowerCase().replace(/\s+/g, '_') // Generate role key from name
       });
       
+      // Close modal and reset form immediately
       setShowAddRoleModal(false);
       setNewRole({
         name: '',
         description: '',
         permissions: []
       });
+      
       alert('Role added successfully!');
     } catch (error) {
       console.error('Error adding role:', error);
       alert('Failed to add role. Please try again.');
+    }
+  };
+
+  const handleDeleteRole = async (roleId: string, roleName: string) => {
+    if (confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
+      try {
+        await RolesService.deleteRole(roleId);
+        alert('Role deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting role:', error);
+        alert('Failed to delete role. Please try again.');
+      }
     }
   };
 
@@ -166,6 +180,7 @@ const RoleManagement: React.FC = () => {
 
   const handleSavePermissions = () => {
     console.log('Saving permissions for', selectedRole, ':', editingPermissions);
+    // Close modal immediately after saving
     setShowEditPermissionsModal(false);
     alert('Permissions updated successfully! (This is a demo)');
   };
@@ -217,9 +232,25 @@ const RoleManagement: React.FC = () => {
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rolestat.color}`}>
                     {rolestat.label}
                   </span>
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <Edit className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center space-x-1">
+                    <button className="text-gray-400 hover:text-gray-600 p-1">
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    {/* Only show delete button for custom roles (database roles) */}
+                    {databaseRoles.find(dbRole => dbRole.value === rolestat.value) && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const role = roles.find(r => r.role === rolestat.value);
+                          if (role) handleDeleteRole(role.id, role.name);
+                        }}
+                        className="text-red-400 hover:text-red-600 p-1"
+                        title="Delete Role"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Users className="h-4 w-4" />

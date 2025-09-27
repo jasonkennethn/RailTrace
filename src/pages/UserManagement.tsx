@@ -77,6 +77,8 @@ const UserManagement: React.FC = () => {
       };
 
       await UsersService.addUser(userData);
+      
+      // Close modal and reset form immediately
       setShowAddModal(false);
       setNewUser({
         name: '',
@@ -86,6 +88,10 @@ const UserManagement: React.FC = () => {
         section: '',
         password: ''
       });
+      
+      // Success message
+      alert('User added successfully!');
+      
     } catch (error) {
       console.error('Error adding user:', error);
       alert('Failed to add user. Please try again.');

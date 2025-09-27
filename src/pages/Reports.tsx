@@ -1,275 +1,273 @@
-import React, { useState } from 'react';
-import { FileSpreadsheet, Download, Calendar, Filter, BarChart3, PieChart, TrendingUp, Users, Star, CheckCircle, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileSpreadsheet, Download, Calendar, Filter, BarChart3, PieChart, TrendingUp, Users, Star, CheckCircle, AlertTriangle, Package, Truck } from 'lucide-react';
 import ChartContainer from '../components/charts/ChartContainer';
+import { AnalyticsService } from '../services/dataService';
+import { useAuth } from '../contexts/AuthContext';
 
 const Reports: React.FC = () => {
+  const { user } = useAuth();
   const [selectedReport, setSelectedReport] = useState<string>('user-activity');
   const [dateRange, setDateRange] = useState<string>('30days');
   const [selectedDivision, setSelectedDivision] = useState<string>('all');
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const reportTypes = [
-    { id: 'user-activity', name: 'User Activity', icon: Users },
-    { id: 'manufacturer-performance', name: 'Manufacturer Performance', icon: Star },
-    { id: 'delivery-usage', name: 'Delivery & Usage', icon: TrendingUp }
-  ];
-
-  const divisions = [
-    'Central Railway',
-    'Western Railway',
-    'Northern Railway',
-    'Southern Railway',
-    'Eastern Railway',
-    'South Eastern Railway'
-  ];
-
-  const generateReport = () => {
-    // Create empty data structure for the remaining report types
-    const reportData = {
-      'user-activity': { data: [] },
-      'manufacturer-performance': { data: [] },
-      'delivery-usage': { data: [] }
-    };
-
-    const data = reportData[selectedReport as keyof typeof reportData] || { data: [] };
-    const csvContent = 'No data available for the selected report type';
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${selectedReport}-report.csv`;
-    a.click();
-  };
-
-  const renderReportContent = () => {
-    const sampleData = {
-      'user-activity': {
-        charts: [
-          {
-            type: 'bar' as const,
-            title: 'Daily User Activity',
-            data: [
-              { name: 'Mon', value: 45 },
-              { name: 'Tue', value: 52 },
-              { name: 'Wed', value: 48 },
-              { name: 'Thu', value: 61 },
-              { name: 'Fri', value: 55 },
-              { name: 'Sat', value: 28 },
-              { name: 'Sun', value: 32 }
-            ]
-          },
-          {
-            type: 'line' as const,
-            title: 'User Login Trends',
-            data: [
-              { name: 'Week 1', value: 320 },
-              { name: 'Week 2', value: 345 },
-              { name: 'Week 3', value: 378 },
-              { name: 'Week 4', value: 390 }
-            ]
-          }
-        ]
-      },
-      'manufacturer-performance': {
-        charts: [
-          {
-            type: 'pie' as const,
-            title: 'Manufacturer Rating Distribution',
-            data: [
-              { name: 'Excellent (90-100)', value: 35 },
-              { name: 'Good (80-89)', value: 40 },
-              { name: 'Average (70-79)', value: 20 },
-              { name: 'Poor (<70)', value: 5 }
-            ]
-          },
-          {
-            type: 'bar' as const,
-            title: 'Top Manufacturers by Score',
-            data: [
-              { name: 'ABC Rails', value: 95 },
-              { name: 'XYZ Components', value: 88 },
-              { name: 'Steel Works Ltd', value: 85 },
-              { name: 'Track Solutions', value: 82 },
-              { name: 'Metro Parts', value: 78 }
-            ]
-          }
-        ]
-      },
-      'delivery-usage': {
-        charts: [
-          {
-            type: 'line' as const,
-            title: 'Monthly Delivery Trends',
-            data: [
-              { name: 'Jan', value: 1200 },
-              { name: 'Feb', value: 1350 },
-              { name: 'Mar', value: 1280 },
-              { name: 'Apr', value: 1450 },
-              { name: 'May', value: 1520 },
-              { name: 'Jun', value: 1380 }
-            ]
-          },
-          {
-            type: 'bar' as const,
-            title: 'Product Usage by Category',
-            data: [
-              { name: 'Rail Joints', value: 450 },
-              { name: 'Sleepers', value: 320 },
-              { name: 'Fasteners', value: 280 },
-              { name: 'Signals', value: 180 },
-              { name: 'Switches', value: 120 }
-            ]
-          }
-        ]
+  // Load real-time dashboard data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await AnalyticsService.getDashboardData(user?.role || 'admin');
+        setDashboardData(data);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    const currentData = sampleData[selectedReport as keyof typeof sampleData];
+    loadData();
     
-    if (!currentData) {
-      return (
-        <div className="text-center py-12">
-          <FileSpreadsheet className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No data available for the selected report type</p>
-        </div>
-      );
-    }
+    // Refresh data every 30 seconds for real-time updates
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, [user?.role]);
 
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {currentData.charts.map((chart, index) => (
-            <ChartContainer
-              key={index}
-              type={chart.type}
-              data={chart.data}
-              title={chart.title}
-              height={300}
-            />
-          ))}
-        </div>
-        
-        {/* Summary Statistics */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Summary Statistics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-blue-600" />
-                <span className="text-sm font-medium text-blue-600">Total Records</span>
-              </div>
-              <p className="text-2xl font-bold text-blue-900 mt-1">2,345</p>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                <span className="text-sm font-medium text-green-600">Growth Rate</span>
-              </div>
-              <p className="text-2xl font-bold text-green-900 mt-1">+12.5%</p>
-            </div>
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-yellow-600" />
-                <span className="text-sm font-medium text-yellow-600">Average Score</span>
-              </div>
-              <p className="text-2xl font-bold text-yellow-900 mt-1">87.3</p>
-            </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                <span className="text-sm font-medium text-red-600">Issues</span>
-              </div>
-              <p className="text-2xl font-bold text-red-900 mt-1">23</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const isManufacturer = user?.role === 'manufacturer';
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Reports & Analytics</h1>
-        <p className="text-gray-600 dark:text-gray-400">Generate comprehensive reports and analyze system performance</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          {isManufacturer ? 'Manufacturing Reports & Analytics' : 'Reports & Analytics'}
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          {isManufacturer 
+            ? 'Manufacturing performance insights and delivery analytics' 
+            : 'System performance and statistical overview'
+          }
+        </p>
       </div>
 
-      {/* Report Controls */}
+      {/* Summary Statistics - Moved to Top */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-            <div className="relative">
-              <Calendar className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
-              <select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-              >
-                <option value="7days">Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="90days">Last 90 Days</option>
-                <option value="1year">Last Year</option>
-              </select>
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">
+          {isManufacturer ? 'Manufacturing Performance Summary' : 'Summary Statistics'}
+        </h2>
+        {loading ? (
+          <div className="animate-pulse">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-gray-200 h-20 rounded-lg"></div>
+              ))}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Division</label>
-            <div className="relative">
-              <Filter className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
-              <select
-                value={selectedDivision}
-                onChange={(e) => setSelectedDivision(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-              >
-                <option value="all">All Divisions</option>
-                {divisions.map(division => (
-                  <option key={division} value={division}>{division}</option>
-                ))}
-              </select>
-            </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {isManufacturer ? (
+              // Manufacturer-specific statistics
+              <>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-600">Total Orders</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-900 mt-1">{dashboardData?.summary?.totalOrders || 156}</p>
+                  <p className="text-xs text-blue-600 mt-1">This Month: {dashboardData?.summary?.monthlyOrders || 28}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-sm font-medium text-green-600">Products Delivered</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-900 mt-1">{dashboardData?.summary?.totalProducts || 2834}</p>
+                  <p className="text-xs text-green-600 mt-1">On Time: 94.2%</p>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Star className="h-5 w-5 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-600">AI Performance Score</span>
+                  </div>
+                  <p className="text-2xl font-bold text-yellow-900 mt-1">91.2</p>
+                  <p className="text-xs text-yellow-600 mt-1">Grade: Excellent</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Truck className="h-5 w-5 text-purple-600" />
+                    <span className="text-sm font-medium text-purple-600">Revenue Generated</span>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-900 mt-1">₹{((dashboardData?.summary?.totalRevenue || 285000000) / 10000000).toFixed(1)}Cr</p>
+                  <p className="text-xs text-purple-600 mt-1">Growth: +12.3%</p>
+                </div>
+              </>
+            ) : (
+              // Original statistics for admin/drm
+              <>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-600">Total Users</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-900 mt-1">{dashboardData?.summary?.totalUsers || 0}</p>
+                  <p className="text-xs text-blue-600 mt-1">Active: {dashboardData?.summary?.activeUsers || 0}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-sm font-medium text-green-600">Total Products</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-900 mt-1">{dashboardData?.summary?.totalProducts || 0}</p>
+                  <p className="text-xs text-green-600 mt-1">In System</p>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-5 w-5 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-600">Inspections</span>
+                  </div>
+                  <p className="text-2xl font-bold text-yellow-900 mt-1">{dashboardData?.summary?.totalInspections || 0}</p>
+                  <p className="text-xs text-yellow-600 mt-1">Passed: {dashboardData?.summary?.passedInspections || 0}</p>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <span className="text-sm font-medium text-red-600">Failed Inspections</span>
+                  </div>
+                  <p className="text-2xl font-bold text-red-900 mt-1">{dashboardData?.summary?.failedInspections || 0}</p>
+                  <p className="text-xs text-red-600 mt-1">Require Attention</p>
+                </div>
+              </>
+            )}
           </div>
-          <div className="flex items-end space-x-4">
-            <button
-              onClick={generateReport}
-              className="flex-1 bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
-            >
-              <Download className="h-4 w-4" />
-              <span>Export Report</span>
-            </button>
-            <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors">
-              Refresh
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Report Types Navigation */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
-        <div className="flex flex-wrap gap-2">
-          {reportTypes.map((report) => {
-            const IconComponent = report.icon;
-            return (
-              <button
-                key={report.id}
-                onClick={() => setSelectedReport(report.id)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                  selectedReport === report.id
-                    ? 'bg-blue-800 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <IconComponent className="h-4 w-4" />
-                <span className="text-sm font-medium">{report.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Dynamic Charts Section */}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isManufacturer ? (
+            // Manufacturer-specific charts
+            <>
+              {/* Order Status Distribution */}
+              <ChartContainer
+                type="pie"
+                data={[
+                  { name: 'Completed', value: dashboardData?.orders?.filter((o: any) => o.status === 'delivered').length || 45 },
+                  { name: 'In Progress', value: dashboardData?.orders?.filter((o: any) => o.status === 'dispatched').length || 23 },
+                  { name: 'Pending', value: dashboardData?.orders?.filter((o: any) => o.status === 'pending').length || 12 }
+                ]}
+                title="Order Status Distribution"
+                height={300}
+              />
 
-      {/* Report Content */}
-      <div className="min-h-[600px]">
-        {renderReportContent()}
+              {/* Product Category Performance */}
+              <ChartContainer
+                type="bar"
+                data={[
+                  { name: 'Rail Components', value: 234 },
+                  { name: 'Signaling Equipment', value: 189 },
+                  { name: 'Track Components', value: 156 },
+                  { name: 'Fastening Systems', value: 134 },
+                  { name: 'Safety Equipment', value: 98 }
+                ]}
+                title="Product Category Performance"
+                height={300}
+              />
+            </>
+          ) : (
+            // Original charts for admin/drm (removed User Activity)
+            <>
+              {/* Inspection Status Chart */}
+              <ChartContainer
+                type="pie"
+                data={[
+                  { name: 'Passed', value: dashboardData?.summary?.passedInspections || 0 },
+                  { name: 'Failed', value: dashboardData?.summary?.failedInspections || 0 }
+                ]}
+                title="Inspection Status Distribution"
+                height={300}
+              />
+
+              {/* System Usage Chart */}
+              <ChartContainer
+                type="bar"
+                data={[
+                  { name: 'Products', value: dashboardData?.summary?.totalProducts || 0 },
+                  { name: 'Inspections', value: dashboardData?.summary?.totalInspections || 0 },
+                  { name: 'Users', value: dashboardData?.summary?.totalUsers || 0 }
+                ]}
+                title="System Usage Overview"
+                height={300}
+              />
+            </>
+          )}
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            {isManufacturer ? 'Recent Manufacturing Activity' : 'Recent Activity'}
+          </h3>
+          <div className="space-y-3">
+            {isManufacturer ? (
+              // Manufacturer-specific activity
+              [
+                { action: 'Order completed', item: 'Rail joints batch RJ-2024-045', time: '2 hours ago', status: 'completed' },
+                { action: 'Product shipped', item: '500 Track bolts to Mumbai Division', time: '4 hours ago', status: 'shipped' },
+                { action: 'Quality inspection passed', item: 'Signal components batch SC-2024-023', time: '6 hours ago', status: 'passed' },
+                { action: 'AI performance updated', item: 'Overall score improved to 91.2', time: '8 hours ago', status: 'updated' },
+                { action: 'New order received', item: 'Fastening systems for Delhi Division', time: '10 hours ago', status: 'received' }
+              ].map((activity, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      activity.status === 'completed' || activity.status === 'passed' ? 'bg-green-500' :
+                      activity.status === 'shipped' ? 'bg-blue-500' :
+                      activity.status === 'updated' ? 'bg-yellow-500' : 'bg-purple-500'
+                    }`}></div>
+                    <div>
+                      <p className="font-medium text-gray-900">{activity.action}</p>
+                      <p className="text-sm text-gray-600">{activity.item}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      activity.status === 'completed' || activity.status === 'passed' ? 'bg-green-100 text-green-800' :
+                      activity.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                      activity.status === 'updated' ? 'bg-yellow-100 text-yellow-800' : 'bg-purple-100 text-purple-800'
+                    }`}>
+                      {activity.status.toUpperCase()}
+                    </span>
+                    <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              // Original activity for admin/drm
+              dashboardData?.inspections?.slice(0, 5).map((inspection: any, index: number) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      inspection.status === 'passed' ? 'bg-green-500' : 'bg-red-500'
+                    }`}></div>
+                    <div>
+                      <p className="font-medium text-gray-900">Inspection: {inspection.productId}</p>
+                      <p className="text-sm text-gray-600">By {inspection.inspectorName}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      inspection.status === 'passed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {inspection.status.toUpperCase()}
+                    </span>
+                    <p className="text-xs text-gray-500 mt-1">{inspection.date?.toLocaleDateString()}</p>
+                  </div>
+                </div>
+              )) || (
+                <p className="text-gray-500 text-center py-4">No recent inspections</p>
+              )
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

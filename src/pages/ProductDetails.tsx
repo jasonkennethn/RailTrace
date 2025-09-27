@@ -385,7 +385,14 @@ const ProductDetails: React.FC = () => {
                   {selectedProduct.testReports.map((report, index) => (
                     <div key={index} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
                       <p className="text-blue-800 dark:text-blue-200 font-medium">{report}</p>
-                      <button className="text-blue-600 dark:text-blue-400 text-sm hover:underline mt-1">
+                      <button 
+                        onClick={() => {
+                          // Open PDF report in new tab
+                          const reportUrl = `/api/reports/${selectedProduct.id}/${report.replace(/\s+/g, '_').toLowerCase()}.pdf`;
+                          window.open(reportUrl, '_blank');
+                        }}
+                        className="text-blue-600 dark:text-blue-400 text-sm hover:underline mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                      >
                         View Report
                       </button>
                     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, Search, Filter, Download, Eye, Shield, Clock, User } from 'lucide-react';
+import { FileCheck, Search, Filter, Download, Eye, Shield, Clock, User, BarChart3, TrendingUp } from 'lucide-react';
 import { AuditLogsService } from '../services/dataService';
+import ChartContainer from '../components/charts/ChartContainer';
 
 interface AuditLog {
   id: string;
@@ -110,8 +111,8 @@ const AuditLogs: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Audit Logs</h1>
-        <p className="text-gray-600 dark:text-gray-400">Monitor system activities and security events</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Audit Logs & Reports</h1>
+        <p className="text-gray-600 dark:text-gray-400">Monitor system activities, security events, and generate analytical reports</p>
       </div>
 
       {/* Filters */}
@@ -167,6 +168,54 @@ const AuditLogs: React.FC = () => {
         </div>
       </div>
 
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Action Distribution Chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+          <div className="flex items-center space-x-2 mb-4">
+            <BarChart3 className="h-5 w-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Action Distribution</h3>
+          </div>
+          <ChartContainer
+            type="pie"
+            data={actions.map(action => ({
+              name: action.replace('_', ' '),
+              value: auditLogs.filter(log => log.action === action).length
+            })).filter(item => item.value > 0)}
+            title=""
+            height={250}
+          />
+        </div>
+
+        {/* Activity Timeline Chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+          <div className="flex items-center space-x-2 mb-4">
+            <TrendingUp className="h-5 w-5 text-green-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Daily Activity</h3>
+          </div>
+          <ChartContainer
+            type="line"
+            data={(() => {
+              const last7Days = Array.from({length: 7}, (_, i) => {
+                const date = new Date();
+                date.setDate(date.getDate() - (6 - i));
+                return {
+                  name: date.toLocaleDateString('en-US', {weekday: 'short'}),
+                  value: auditLogs.filter(log => {
+                    const logDate = new Date(log.timestamp);
+                    return logDate.toDateString() === date.toDateString();
+                  }).length
+                };
+              });
+              return last7Days;
+            })()
+            }
+            title=""
+            height={250}
+          />
+        </div>
+      </div>
+
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
@@ -200,6 +249,17 @@ const AuditLogs: React.FC = () => {
             <Shield className="h-8 w-8 text-red-600" />
           </div>
         </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Unique Users</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {new Set(auditLogs.map(log => log.userId)).size}
+              </p>
+            </div>
+            <User className="h-8 w-8 text-purple-600" />
+          </div>
+        </div>
       </div>
 
       {/* Audit Logs Table */}
@@ -213,7 +273,6 @@ const AuditLogs: React.FC = () => {
                 <th className="text-left py-4 px-6 font-semibold text-gray-900">Action</th>
                 <th className="text-left py-4 px-6 font-semibold text-gray-900">Resource</th>
                 <th className="text-left py-4 px-6 font-semibold text-gray-900">Status</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-900">Blockchain</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -256,18 +315,6 @@ const AuditLogs: React.FC = () => {
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
                       {log.status.toUpperCase()}
                     </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    {log.blockchainHash ? (
-                      <div className="flex items-center space-x-2">
-                        <Shield className="h-4 w-4 text-green-500" />
-                        <span className="text-xs font-mono text-gray-600">
-                          {log.blockchainHash.substring(0, 10)}...
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-400">N/A</span>
-                    )}
                   </td>
                 </tr>
               ))}

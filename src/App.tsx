@@ -21,7 +21,6 @@ import Settings from './pages/Settings';
 import DivisionReports from './pages/DivisionReports';
 import ApprovalRequests from './pages/ApprovalRequests';
 import ScheduleNotifications from './pages/ScheduleNotifications';
-import SubDivisionReports from './pages/SubDivisionReports';
 import InspectionOverview from './pages/InspectionOverview';
 import OrderManagement from './pages/OrderManagement';
 import ProductDetails from './pages/ProductDetails';
@@ -31,6 +30,8 @@ import InspectionLogs from './pages/InspectionLogs';
 import RecordInspection from './pages/RecordInspection';
 import RequestProducts from './pages/RequestProducts';
 import InspectionHistory from './pages/InspectionHistory';
+import BlockchainData from './pages/BlockchainData';
+import AIReports from './pages/AIReports';
 
 const AppRoutes: React.FC = () => {
   const { user, loading } = useAuth();
@@ -78,6 +79,16 @@ const AppRoutes: React.FC = () => {
                 <AuditLogs />
               </ProtectedRoute>
             } />
+            <Route path="/blockchain-data" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <BlockchainData />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai-reports" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AIReports />
+              </ProtectedRoute>
+            } />
             <Route path="/inspections" element={
               <ProtectedRoute allowedRoles={['admin', 'drm', 'den', 'inspector']}>
                 <Inspections />
@@ -107,11 +118,6 @@ const AppRoutes: React.FC = () => {
             <Route path="/schedule-notifications" element={
               <ProtectedRoute allowedRoles={['drm']}>
                 <ScheduleNotifications />
-              </ProtectedRoute>
-            } />
-            <Route path="/subdivision-reports" element={
-              <ProtectedRoute allowedRoles={['den']}>
-                <SubDivisionReports />
               </ProtectedRoute>
             } />
             <Route path="/inspection-overview" element={

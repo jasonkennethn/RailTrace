@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Search, Filter, Edit, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Package, Search, Filter, Edit, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Product } from '../types';
 import { ProductsService } from '../services/dataService';
 
@@ -8,8 +8,6 @@ const Inventory: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [addingProduct, setAddingProduct] = useState<boolean>(false);
-  const [newProduct, setNewProduct] = useState<Partial<Product>>({});
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -99,53 +97,6 @@ const Inventory: React.FC = () => {
     setEditingProduct(null);
   };
 
-  const handleAddProduct = () => {
-    setAddingProduct(true);
-    setNewProduct({
-      name: '',
-      category: 'Rail Components',
-      manufacturer: '',
-      batchNumber: '',
-      qrCode: '',
-      status: 'manufactured',
-      location: '',
-      manufacturedDate: new Date()
-    });
-  };
-
-  const handleSaveNewProduct = () => {
-    if (newProduct.name && newProduct.manufacturer && newProduct.batchNumber) {
-      const productToAdd: Product = {
-        id: `PROD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        name: newProduct.name!,
-        category: newProduct.category!,
-        manufacturer: newProduct.manufacturer!,
-        batchNumber: newProduct.batchNumber!,
-        qrCode: newProduct.qrCode || `QR-${Date.now()}`,
-        blockchainHash: `0x${Math.random().toString(16).substring(2, 66)}`, // Generate dummy hash
-        status: newProduct.status as any || 'manufactured',
-        location: newProduct.location || 'Manufacturing Facility',
-        manufacturedDate: newProduct.manufacturedDate || new Date()
-      };
-      
-      // Add product using the ProductsService
-      ProductsService.addProduct(productToAdd)
-        .then(() => {
-          console.log('Product added successfully');
-          setAddingProduct(false);
-          setNewProduct({});
-        })
-        .catch((error) => {
-          console.error('Error adding product:', error);
-        });
-    }
-  };
-
-  const handleCancelAdd = () => {
-    setAddingProduct(false);
-    setNewProduct({});
-  };
-
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <div className="mb-8">
@@ -193,13 +144,6 @@ const Inventory: React.FC = () => {
               <option value="maintenance">Maintenance</option>
             </select>
           </div>
-          <button 
-            onClick={handleAddProduct}
-            className="bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add Product</span>
-          </button>
         </div>
       </div>
 
@@ -327,86 +271,6 @@ const Inventory: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Add Product Modal */}
-      {addingProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add New Product</h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Name *</label>
-                <input
-                  type="text"
-                  value={newProduct.name || ''}
-                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter product name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                <select
-                  value={newProduct.category || 'Rail Components'}
-                  onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Manufacturer *</label>
-                <input
-                  type="text"
-                  value={newProduct.manufacturer || ''}
-                  onChange={(e) => setNewProduct({ ...newProduct, manufacturer: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter manufacturer name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Batch Number *</label>
-                <input
-                  type="text"
-                  value={newProduct.batchNumber || ''}
-                  onChange={(e) => setNewProduct({ ...newProduct, batchNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter batch number"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
-                <input
-                  type="text"
-                  value={newProduct.location || ''}
-                  onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter location"
-                />
-              </div>
-              <div className="flex space-x-4 pt-4">
-                <button
-                  onClick={handleSaveNewProduct}
-                  disabled={!newProduct.name || !newProduct.manufacturer || !newProduct.batchNumber}
-                  className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg font-medium transition-colors"
-                >
-                  Add Product
-                </button>
-                <button
-                  onClick={handleCancelAdd}
-                  className="flex-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Edit Product Modal */}
       {editingProduct && (

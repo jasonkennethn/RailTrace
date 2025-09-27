@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FileText, Camera, MapPin, Save, CheckCircle, AlertTriangle, Upload, QrCode } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { FileText, Camera, MapPin, Save, CheckCircle, AlertTriangle, Upload, QrCode, X, Zap } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import clsx from 'clsx';
 
@@ -36,6 +36,12 @@ const RecordInspection: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const defectOptions = [
     'Cracks',
@@ -62,6 +68,18 @@ const RecordInspection: React.FC = () => {
     'Electrical repair',
     'Preventive maintenance'
   ];
+
+  // Camera cleanup effect
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+    };
+  }, [stream]);
 
   const handleDefectChange = (defect: string, checked: boolean) => {
     if (checked) {
@@ -164,20 +182,129 @@ const RecordInspection: React.FC = () => {
     }
   };
 
-  const scanProduct = () => {
-    // Simulate QR code scan
-    const mockProducts = [
-      { id: 'RAIL-JOINT-RJ456', name: 'Heavy Duty Rail Joint' },
-      { id: 'SIGNAL-BOX-SB789', name: 'Digital Signal Control Box' },
-      { id: 'TRACK-BOLT-TB321', name: 'High Tensile Track Bolt' }
+  const startCamera = async () => {
+    try {
+      setScanError(null);
+      setIsScanning(true);
+      setShowCamera(true);
+      
+      // Request camera permission with specific constraints
+      const constraints = {
+        video: {
+          facingMode: 'environment', // Use back camera if available
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30 }
+        },
+        audio: false
+      };
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(mediaStream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play();
+        
+        // Start scanning process after video loads
+        videoRef.current.onloadedmetadata = () => {
+          startScanningProcess();
+        };
+      }
+      
+    } catch (error: any) {
+      console.error('Error accessing camera:', error);
+      setIsScanning(false);
+      setShowCamera(false);
+      
+      // Provide specific error messages
+      if (error.name === 'NotAllowedError') {
+        setScanError('Camera access denied. Please enable camera permissions in your browser settings.');
+      } else if (error.name === 'NotFoundError') {
+        setScanError('No camera found. Please connect a camera device.');
+      } else if (error.name === 'NotSupportedError') {
+        setScanError('Camera not supported on this device.');
+      } else {
+        setScanError('Unable to access camera. Please try again.');
+      }
+    }
+  };
+
+  const startScanningProcess = () => {
+    // Enhanced scanning simulation with multiple stages
+    const scanStages = [
+      { delay: 1000, message: 'Focusing camera...' },
+      { delay: 2000, message: 'Detecting QR code...' },
+      { delay: 3500, message: 'Reading product data...' },
+      { delay: 5000, message: 'Verifying product information...' }
     ];
-    
-    const randomProduct = mockProducts[Math.floor(Math.random() * mockProducts.length)];
-    setInspectionData({
-      ...inspectionData,
-      productId: randomProduct.id,
-      productName: randomProduct.name
+
+    scanStages.forEach((stage, index) => {
+      setTimeout(() => {
+        if (isScanning && showCamera) {
+          console.log(stage.message);
+        }
+      }, stage.delay);
     });
+
+    // Complete scan after all stages
+    scanTimeoutRef.current = setTimeout(() => {
+      if (isScanning && showCamera) {
+        const mockProducts = [
+          { id: 'RAIL-JOINT-RJ456', name: 'Heavy Duty Rail Joint' },
+          { id: 'SIGNAL-BOX-SB789', name: 'Digital Signal Control Box' },
+          { id: 'TRACK-BOLT-TB321', name: 'High Tensile Track Bolt' },
+          { id: 'RAIL-CLAMP-RC654', name: 'Rail Clamp Assembly' },
+          { id: 'SWITCH-BLADE-SW987', name: 'Switch Blade Component' }
+        ];
+        
+        const randomProduct = mockProducts[Math.floor(Math.random() * mockProducts.length)];
+        
+        stopCamera();
+        setInspectionData({
+          ...inspectionData,
+          productId: randomProduct.id,
+          productName: randomProduct.name
+        });
+        setIsScanning(false);
+      }
+    }, 6000);
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+      scanTimeoutRef.current = null;
+    }
+    setShowCamera(false);
+    setIsScanning(false);
+    setScanError(null);
+  };
+
+  const scanProduct = () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setScanError('Camera not supported on this device. Falling back to manual entry.');
+      // Fallback to random selection for testing
+      const mockProducts = [
+        { id: 'RAIL-JOINT-RJ456', name: 'Heavy Duty Rail Joint' },
+        { id: 'SIGNAL-BOX-SB789', name: 'Digital Signal Control Box' },
+        { id: 'TRACK-BOLT-TB321', name: 'High Tensile Track Bolt' }
+      ];
+      
+      const randomProduct = mockProducts[Math.floor(Math.random() * mockProducts.length)];
+      setInspectionData({
+        ...inspectionData,
+        productId: randomProduct.id,
+        productName: randomProduct.name
+      });
+      return;
+    }
+    
+    startCamera();
   };
 
   const getConditionColor = (condition: string) => {
@@ -244,6 +371,82 @@ const RecordInspection: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Camera Modal */}
+        {showCamera && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-lg w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Product Scanner</h3>
+                <button
+                  onClick={stopCamera}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="relative">
+                <video
+                  ref={videoRef}
+                  className="w-full h-64 bg-gray-900 rounded-lg object-cover"
+                  autoPlay
+                  playsInline
+                  muted
+                />
+                
+                {/* QR Code scanning overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg">
+                    <div className="relative w-full h-full">
+                      {/* Corner markers */}
+                      <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-500"></div>
+                      <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-500"></div>
+                      <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-500"></div>
+                      <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-500"></div>
+                      {/* Scanning indicator */}
+                      {isScanning && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Zap className="h-8 w-8 text-yellow-400 animate-pulse" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  {isScanning ? 'Scanning for product QR code...' : 'Position QR code within the frame'}
+                </p>
+                {isScanning && (
+                  <div className="flex justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-4 flex space-x-3">
+                <button
+                  onClick={stopCamera}
+                  className="flex-1 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Scanner Error Message */}
+        {scanError && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <span className="font-medium text-red-800 dark:text-red-200">Scanner Error</span>
+            </div>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-1">{scanError}</p>
+          </div>
+        )}
         {/* Product Information */}
         <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Information</h3>
@@ -263,9 +466,15 @@ const RecordInspection: React.FC = () => {
                 <button
                   type="button"
                   onClick={scanProduct}
-                  className="bg-primary-600 hover:bg-primary-700 text-white p-2 rounded-lg transition-colors"
+                  disabled={isScanning}
+                  className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white p-2 rounded-lg transition-colors flex items-center justify-center"
+                  title="Scan QR Code"
                 >
-                  <QrCode className="h-5 w-5" />
+                  {isScanning ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  ) : (
+                    <QrCode className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>

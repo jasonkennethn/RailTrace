@@ -390,14 +390,7 @@ const OrderManagement: React.FC = () => {
                     Dispatch
                   </button>
                 )}
-                {order.status === 'dispatched' && (
-                  <button
-                    onClick={() => updateOrderStatus(order.id, 'delivered')}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Delivered
-                  </button>
-                )}
+
               </div>
             </div>
           </div>
@@ -499,17 +492,7 @@ const OrderManagement: React.FC = () => {
                     Mark as Dispatched
                   </button>
                 )}
-                {selectedOrder.status === 'dispatched' && (
-                  <button
-                    onClick={() => {
-                      updateOrderStatus(selectedOrder.id, 'delivered');
-                      setSelectedOrder(null);
-                    }}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-                  >
-                    Mark as Delivered
-                  </button>
-                )}
+
               </div>
             </div>
           </div>

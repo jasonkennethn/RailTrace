@@ -8,7 +8,9 @@ export const navigationItems: NavItem[] = [
   { label: 'User Management', path: '/users', icon: 'Users', roles: ['admin'] },
   { label: 'Role Management', path: '/roles', icon: 'Shield', roles: ['admin'] },
   { label: 'Reports', path: '/reports', icon: 'FileSpreadsheet', roles: ['admin'] },
-  { label: 'Audit Logs', path: '/audit', icon: 'FileCheck', roles: ['admin'] },
+  { label: 'Audit Logs & Reports', path: '/audit', icon: 'FileCheck', roles: ['admin'] },
+  { label: 'Blockchain Data', path: '/blockchain-data', icon: 'Database', roles: ['admin'] },
+  { label: 'AI Reports', path: '/ai-reports', icon: 'Brain', roles: ['admin'] },
   
   // DRM navigation
   { label: 'User Management', path: '/users', icon: 'Users', roles: ['drm'] },
@@ -17,7 +19,6 @@ export const navigationItems: NavItem[] = [
   
   // DEN navigation
   { label: 'Section Reports', path: '/section-reports', icon: 'BarChart3', roles: ['den'] },
-  { label: 'Sub-Division Reports', path: '/subdivision-reports', icon: 'TrendingUp', roles: ['den'] },
   { label: 'Inspection Overview', path: '/inspection-overview', icon: 'Eye', roles: ['den'] },
   { label: 'Assign Tasks', path: '/assign-tasks', icon: 'UserPlus', roles: ['den'] },
   { label: 'Inspection Logs', path: '/inspection-logs', icon: 'FileText', roles: ['den'] },

@@ -19,6 +19,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signUp: (data: SignUpData) => Promise<void>;
   logout: () => Promise<void>;
+  redirectToDashboard: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,10 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  const redirectToDashboard = () => {
+    window.location.href = '/dashboard';
+  };
 
   // Demo users for authentication when Firebase is not configured
   const demoUsers = [
@@ -148,6 +153,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setUser(user);
         localStorage.setItem('railway_user', JSON.stringify(user));
+        
+        // Auto-redirect to dashboard after successful login
+        setTimeout(() => {
+          redirectToDashboard();
+        }, 100);
       } else {
         throw new Error('Invalid credentials');
       }
@@ -211,7 +221,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     login,
     signUp,
-    logout
+    logout,
+    redirectToDashboard
   };
 
   return (

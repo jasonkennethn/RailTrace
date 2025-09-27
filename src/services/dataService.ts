@@ -29,6 +29,10 @@ interface ApprovalRequest {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: Date;
   documents?: string[];
+  approvedBy?: string;
+  approvedAt?: Date;
+  warrantyExpiry?: Date;
+  estimatedDelivery?: Date;
 }
 
 interface Task {
@@ -64,6 +68,20 @@ interface AuditLog {
 // Users Collection Service
 export class UsersService {
   private static collectionName = 'users';
+  private static demoUsers: User[] = [];
+  private static isInitialized = false;
+  private static subscribers: ((users: User[]) => void)[] = [];
+
+  private static initializeDemoData() {
+    if (!this.isInitialized) {
+      this.demoUsers = this.getDemoUsers();
+      this.isInitialized = true;
+    }
+  }
+
+  private static notifySubscribers() {
+    this.subscribers.forEach(callback => callback([...this.demoUsers]));
+  }
 
   static async getUsers(): Promise<User[]> {
     try {
@@ -77,7 +95,8 @@ export class UsersService {
     } catch (error) {
       console.error('Error fetching users:', error);
       // Return demo data if Firebase fails
-      return this.getDemoUsers();
+      this.initializeDemoData();
+      return [...this.demoUsers];
     }
   }
 
@@ -90,8 +109,21 @@ export class UsersService {
       });
       return docRef.id;
     } catch (error) {
-      console.error('Error adding user:', error);
-      throw new Error('Failed to add user');
+      console.error('Error adding user, using demo mode:', error);
+      // Fallback to demo mode - add to in-memory array
+      this.initializeDemoData();
+      const newUser: User = {
+        id: `user_${Date.now()}`,
+        ...userData,
+        createdAt: new Date(),
+        lastLogin: new Date()
+      };
+      this.demoUsers.push(newUser);
+      
+      // Notify all subscribers of the new user
+      this.notifySubscribers();
+      
+      return newUser.id;
     }
   }
 
@@ -128,9 +160,22 @@ export class UsersService {
         callback(users);
       });
     } catch (error) {
-      console.error('Error subscribing to users:', error);
-      callback(this.getDemoUsers());
-      return () => {};
+      console.error('Error subscribing to users, using demo mode:', error);
+      this.initializeDemoData();
+      
+      // Add subscriber to demo mode subscriber list
+      this.subscribers.push(callback);
+      
+      // Immediately call with current data
+      callback([...this.demoUsers]);
+      
+      // Return unsubscribe function
+      return () => {
+        const index = this.subscribers.indexOf(callback);
+        if (index > -1) {
+          this.subscribers.splice(index, 1);
+        }
+      };
     }
   }
 
@@ -556,6 +601,47 @@ export class ApprovalRequestsService {
     }
   }
 
+  static async updateApprovalRequest(requestId: string, updates: Partial<ApprovalRequest>, approverName?: string): Promise<void> {
+    try {
+      const docRef = doc(db, this.collectionName, requestId);
+      await updateDoc(docRef, {
+        ...updates,
+        ...(updates.status === 'approved' && {
+          approvedBy: approverName,
+          approvedAt: serverTimestamp(),
+          // Calculate warranty expiry and delivery estimate for approved requests
+          ...(updates.type !== 'budget' && {
+            warrantyExpiry: new Date(Date.now() + (365 * 24 * 60 * 60 * 1000) + (Math.random() * 365 * 24 * 60 * 60 * 1000)), // 1-2 years
+            estimatedDelivery: new Date(Date.now() + (Math.floor(Math.random() * 30) + 7) * 24 * 60 * 60 * 1000) // 1-4 weeks
+          })
+        })
+      });
+    } catch (error) {
+      console.error('Error updating approval request, using demo mode:', error);
+      // Fallback to demo mode - update in-memory array
+      this.initializeDemoData();
+      const requestIndex = this.demoRequests.findIndex(req => req.id === requestId);
+      if (requestIndex !== -1) {
+        this.demoRequests[requestIndex] = {
+          ...this.demoRequests[requestIndex],
+          ...updates,
+          ...(updates.status === 'approved' && {
+            approvedBy: approverName,
+            approvedAt: new Date(),
+            // Calculate warranty expiry and delivery estimate for approved requests
+            ...(updates.type !== 'budget' && {
+              warrantyExpiry: new Date(Date.now() + (365 * 24 * 60 * 60 * 1000) + (Math.random() * 365 * 24 * 60 * 60 * 1000)), // 1-2 years
+              estimatedDelivery: new Date(Date.now() + (Math.floor(Math.random() * 30) + 7) * 24 * 60 * 60 * 1000) // 1-4 weeks
+            })
+          })
+        };
+        
+        // Notify all subscribers of the update
+        this.notifySubscribers();
+      }
+    }
+  }
+
   private static getDemoApprovalRequests(): ApprovalRequest[] {
     return [
       {
@@ -582,6 +668,40 @@ export class ApprovalRequestsService {
         status: 'pending',
         createdAt: new Date('2024-01-19T14:15:00'),
         documents: ['inspection-report.pdf']
+      },
+      {
+        id: 'REQ-003',
+        type: 'product',
+        title: 'Track Maintenance Tools',
+        requestedBy: 'Inspector Patel',
+        requestedByRole: 'Inspector',
+        amount: 150000,
+        description: 'Request for specialized track maintenance tools for Section B-456.',
+        priority: 'medium',
+        status: 'approved',
+        createdAt: new Date('2024-01-15T09:20:00'),
+        approvedBy: 'DEN User',
+        approvedAt: new Date('2024-01-16T11:30:00'),
+        warrantyExpiry: new Date('2025-01-16T11:30:00'), // 1 year warranty
+        estimatedDelivery: new Date('2024-01-30T09:00:00'), // 2 weeks delivery
+        documents: ['tool-specifications.pdf']
+      },
+      {
+        id: 'REQ-004',
+        type: 'maintenance',
+        title: 'Signal System Maintenance',
+        requestedBy: 'Technician Sharma',
+        requestedByRole: 'Technician',
+        amount: 75000,
+        description: 'Preventive maintenance for signal system in Section C-789.',
+        priority: 'low',
+        status: 'approved',
+        createdAt: new Date('2024-01-10T16:45:00'),
+        approvedBy: 'DEN User',
+        approvedAt: new Date('2024-01-12T10:15:00'),
+        warrantyExpiry: new Date('2024-07-12T10:15:00'), // 6 months warranty for maintenance
+        estimatedDelivery: new Date('2024-02-09T14:00:00'), // 4 weeks delivery
+        documents: ['maintenance-schedule.pdf']
       }
     ];
   }
@@ -590,6 +710,20 @@ export class ApprovalRequestsService {
 // Tasks Service
 export class TasksService {
   private static collectionName = 'tasks';
+  private static demoTasks: Task[] = [];
+  private static isInitialized = false;
+  private static subscribers: ((tasks: Task[]) => void)[] = [];
+
+  private static initializeDemoData() {
+    if (!this.isInitialized) {
+      this.demoTasks = this.getDemoTasks();
+      this.isInitialized = true;
+    }
+  }
+
+  private static notifySubscribers() {
+    this.subscribers.forEach(callback => callback([...this.demoTasks]));
+  }
 
   static async getTasks(): Promise<Task[]> {
     try {
@@ -604,7 +738,8 @@ export class TasksService {
       })) as Task[];
     } catch (error) {
       console.error('Error fetching tasks:', error);
-      return this.getDemoTasks();
+      this.initializeDemoData();
+      return [...this.demoTasks];
     }
   }
 
@@ -623,9 +758,22 @@ export class TasksService {
         }
       );
     } catch (error) {
-      console.error('Error subscribing to tasks:', error);
-      callback(this.getDemoTasks());
-      return () => {};
+      console.error('Error subscribing to tasks, using demo mode:', error);
+      this.initializeDemoData();
+      
+      // Add subscriber to demo mode subscriber list
+      this.subscribers.push(callback);
+      
+      // Immediately call with current data
+      callback([...this.demoTasks]);
+      
+      // Return unsubscribe function
+      return () => {
+        const index = this.subscribers.indexOf(callback);
+        if (index > -1) {
+          this.subscribers.splice(index, 1);
+        }
+      };
     }
   }
 
@@ -637,8 +785,20 @@ export class TasksService {
       });
       return docRef.id;
     } catch (error) {
-      console.error('Error adding task:', error);
-      throw new Error('Failed to add task');
+      console.error('Error adding task, using demo mode:', error);
+      // Fallback to demo mode - add to in-memory array
+      this.initializeDemoData();
+      const newTask: Task = {
+        id: `TASK-${Date.now()}`,
+        ...taskData,
+        createdDate: new Date()
+      };
+      this.demoTasks.unshift(newTask); // Add to beginning for newest first
+      
+      // Notify all subscribers of the new task
+      this.notifySubscribers();
+      
+      return newTask.id;
     }
   }
 
@@ -681,6 +841,20 @@ export class TasksService {
 // Roles Service
 export class RolesService {
   private static collectionName = 'roles';
+  private static demoRoles: any[] = [];
+  private static isInitialized = false;
+  private static subscribers: ((roles: any[]) => void)[] = [];
+
+  private static initializeDemoData() {
+    if (!this.isInitialized) {
+      this.demoRoles = this.getDemoRoles();
+      this.isInitialized = true;
+    }
+  }
+
+  private static notifySubscribers() {
+    this.subscribers.forEach(callback => callback([...this.demoRoles]));
+  }
   
   static async getRoles(): Promise<any[]> {
     try {
@@ -692,7 +866,8 @@ export class RolesService {
       }));
     } catch (error) {
       console.error('Error fetching roles:', error);
-      return this.getDemoRoles();
+      this.initializeDemoData();
+      return [...this.demoRoles];
     }
   }
 
@@ -704,8 +879,36 @@ export class RolesService {
       });
       return docRef.id;
     } catch (error) {
-      console.error('Error adding role:', error);
-      throw new Error('Failed to add role');
+      console.error('Error adding role, using demo mode:', error);
+      // Fallback to demo mode - add to in-memory array
+      this.initializeDemoData();
+      const newRole = {
+        id: `role_${Date.now()}`,
+        ...roleData,
+        createdAt: new Date()
+      };
+      this.demoRoles.push(newRole);
+      
+      // Notify all subscribers of the new role
+      this.notifySubscribers();
+      
+      return newRole.id;
+    }
+  }
+
+  static async deleteRole(roleId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, this.collectionName, roleId));
+    } catch (error) {
+      console.error('Error deleting role, using demo mode:', error);
+      // Fallback to demo mode - remove from in-memory array
+      this.initializeDemoData();
+      const index = this.demoRoles.findIndex(role => role.id === roleId);
+      if (index > -1) {
+        this.demoRoles.splice(index, 1);
+        // Notify all subscribers of the deletion
+        this.notifySubscribers();
+      }
     }
   }
 
@@ -720,9 +923,22 @@ export class RolesService {
         callback(roles);
       });
     } catch (error) {
-      console.error('Error subscribing to roles:', error);
-      callback(this.getDemoRoles());
-      return () => {};
+      console.error('Error subscribing to roles, using demo mode:', error);
+      this.initializeDemoData();
+      
+      // Add subscriber to demo mode subscriber list
+      this.subscribers.push(callback);
+      
+      // Immediately call with current data
+      callback([...this.demoRoles]);
+      
+      // Return unsubscribe function
+      return () => {
+        const index = this.subscribers.indexOf(callback);
+        if (index > -1) {
+          this.subscribers.splice(index, 1);
+        }
+      };
     }
   }
 

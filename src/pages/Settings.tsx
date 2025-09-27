@@ -117,11 +117,10 @@ const Settings: React.FC = () => {
                 <input
                   type="email"
                   value={settings.profile.email}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    profile: { ...settings.profile, email: e.target.value }
-                  })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  readOnly
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed"
+                  title="Email cannot be changed as it is used for authentication"
                 />
               </div>
               <div>
@@ -156,55 +155,7 @@ const Settings: React.FC = () => {
                       <option value="Electrical Components">Electrical Components</option>
                     </select>
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Products Manufactured</label>
-                    <div className="space-y-2">
-                      {(settings.profile.products || []).map((product, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <input
-                            type="text"
-                            value={product}
-                            onChange={(e) => {
-                              const newProducts = [...(settings.profile.products || [])];
-                              newProducts[index] = e.target.value;
-                              setSettings({
-                                ...settings,
-                                profile: { ...settings.profile, products: newProducts }
-                              });
-                            }}
-                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            placeholder="Product name"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newProducts = (settings.profile.products || []).filter((_, i) => i !== index);
-                              setSettings({
-                                ...settings,
-                                profile: { ...settings.profile, products: newProducts }
-                              });
-                            }}
-                            className="text-red-600 hover:text-red-800 px-2"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newProducts = [...(settings.profile.products || []), ''];
-                          setSettings({
-                            ...settings,
-                            profile: { ...settings.profile, products: newProducts }
-                          });
-                        }}
-                        className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-800"
-                      >
-                        + Add Product
-                      </button>
-                    </div>
-                  </div>
+
                 </>
               ) : (
                 <>
