@@ -67,25 +67,39 @@ const Dashboard: React.FC = () => {
       case 'admin':
         return [
           { title: 'Total Users', value: totalUsers.toString(), change: `+${Math.floor(totalUsers * 0.08)} this month`, changeType: 'positive', icon: 'Users' },
-          { title: 'Active Inspections', value: '89', change: '+5 today', changeType: 'positive', icon: 'CheckCircle' },
+          { title: 'Active Inspections', value: (dashboardData?.summary?.totalInspections || 89).toString(), change: '+5 today', changeType: 'positive', icon: 'CheckCircle' },
           { title: 'System Health', value: '98.5%', change: '+0.3% uptime', changeType: 'positive', icon: 'Shield' },
           { title: 'Data Storage', value: '2.4TB', change: '+150GB this week', changeType: 'neutral', icon: 'Database' },
         ];
       case 'drm':
         return [
           { title: 'Division Reports', value: '24', change: '+4 this week', changeType: 'positive', icon: 'BarChart3' },
-          { title: 'User Management', value: totalUsers.toString(), change: `${activeUsers} active users`, changeType: 'neutral', icon: 'Users' },
-          { title: 'Schedule & Notifications', value: '18', change: '6 scheduled', changeType: 'neutral', icon: 'Calendar' },
-          { title: 'Performance', value: '92%', change: '+3% this month', changeType: 'positive', icon: 'TrendingUp' },
+          { title: 'Active Users', value: totalUsers.toString(), change: `${activeUsers} online now`, changeType: 'neutral', icon: 'Users' },
+          { title: 'Pending Approvals', value: (dashboardData?.summary?.pendingApprovals || 18).toString(), change: '6 urgent', changeType: 'negative', icon: 'Calendar' },
+          { title: 'Division Performance', value: '92%', change: '+3% this month', changeType: 'positive', icon: 'TrendingUp' },
         ];
       case 'den':
         return [
           { title: 'Section Reports', value: '15', change: '+3 this month', changeType: 'positive', icon: 'BarChart3' },
-          { title: 'Sub-Division Reports', value: '8', change: '+2 this week', changeType: 'positive', icon: 'TrendingUp' },
+          { title: 'Pending Tasks', value: (dashboardData?.summary?.pendingTasks || 8).toString(), change: '+2 assigned today', changeType: 'positive', icon: 'TrendingUp' },
           { title: 'Inspection Overview', value: '94%', change: '+3% efficiency', changeType: 'positive', icon: 'Eye' },
-          { title: 'Task Assignments', value: '24', change: '6 pending', changeType: 'neutral', icon: 'UserPlus' },
-          { title: 'Inspection Logs', value: '156', change: '+12 today', changeType: 'positive', icon: 'FileText' },
-          { title: 'Approval Requests', value: '8', change: '3 urgent', changeType: 'negative', icon: 'CheckCircle' },
+          { title: 'Active Inspectors', value: inspectors.toString(), change: `${Math.floor(inspectors * 0.8)} available`, changeType: 'neutral', icon: 'UserPlus' },
+          { title: 'Today\'s Inspections', value: (dashboardData?.summary?.todayInspections || 12).toString(), change: '8 completed', changeType: 'positive', icon: 'FileText' },
+          { title: 'Approval Requests', value: (dashboardData?.summary?.pendingApprovals || 6).toString(), change: '3 urgent', changeType: 'negative', icon: 'CheckCircle' },
+        ];
+      case 'inspector':
+        return [
+          { title: 'Today\'s Tasks', value: (dashboardData?.summary?.assignedTasks || 6).toString(), change: '3 completed', changeType: 'positive', icon: 'CheckCircle' },
+          { title: 'Products Scanned', value: (dashboardData?.summary?.scannedProducts || 23).toString(), change: '+8 today', changeType: 'positive', icon: 'Eye' },
+          { title: 'Inspections Due', value: (dashboardData?.summary?.dueInspections || 4).toString(), change: '2 urgent', changeType: 'negative', icon: 'Clock' },
+          { title: 'Section Coverage', value: '87%', change: '+5% this week', changeType: 'positive', icon: 'TrendingUp' },
+        ];
+      case 'manufacturer':
+        return [
+          { title: 'Active Orders', value: (dashboardData?.summary?.activeOrders || 15).toString(), change: '+3 this week', changeType: 'positive', icon: 'Package' },
+          { title: 'Products Shipped', value: (dashboardData?.summary?.productsShipped || 1247).toString(), change: '+89 this month', changeType: 'positive', icon: 'Truck' },
+          { title: 'AI Performance Score', value: '91.2', change: '+2.3 points', changeType: 'positive', icon: 'TrendingUp' },
+          { title: 'Delivery Rating', value: '96%', change: '+1.2% improvement', changeType: 'positive', icon: 'CheckCircle' },
         ];
 
       default:
@@ -102,29 +116,84 @@ const Dashboard: React.FC = () => {
                user.role === 'den' ? 'Section & Sub-Division Analysis' :
                user.role === 'inspector' ? 'Daily Inspections' :
                'Monthly Orders',
-        data: [
-          { name: 'Jan', value: 120 },
-          { name: 'Feb', value: 98 },
-          { name: 'Mar', value: 134 },
+        data: user.role === 'admin' ? [
+          { name: 'Jan', value: dashboardData?.summary?.totalUsers || 120 },
+          { name: 'Feb', value: dashboardData?.summary?.totalInspections || 98 },
+          { name: 'Mar', value: dashboardData?.summary?.totalProducts || 134 },
           { name: 'Apr', value: 156 },
           { name: 'May', value: 142 },
           { name: 'Jun', value: 178 },
+        ] : user.role === 'drm' ? [
+          { name: 'Week 1', value: 85 },
+          { name: 'Week 2', value: 92 },
+          { name: 'Week 3', value: 78 },
+          { name: 'Week 4', value: 95 },
+          { name: 'Week 5', value: 88 },
+          { name: 'Week 6', value: 101 },
+        ] : user.role === 'den' ? [
+          { name: 'Sect A', value: 45 },
+          { name: 'Sect B', value: 38 },
+          { name: 'Sect C', value: 52 },
+          { name: 'Sect D', value: 41 },
+          { name: 'Sect E', value: 49 },
+          { name: 'Sect F', value: 36 },
+        ] : user.role === 'inspector' ? [
+          { name: 'Mon', value: 8 },
+          { name: 'Tue', value: 12 },
+          { name: 'Wed', value: 6 },
+          { name: 'Thu', value: 15 },
+          { name: 'Fri', value: 10 },
+          { name: 'Sat', value: 4 },
+        ] : [
+          { name: 'Rail Components', value: 234 },
+          { name: 'Signaling', value: 189 },
+          { name: 'Track Parts', value: 156 },
+          { name: 'Fasteners', value: 134 },
+          { name: 'Others', value: 98 },
         ]
       },
       {
         type: 'line',
         title: user.role === 'admin' ? 'System Performance' :
                user.role === 'drm' ? 'Division Performance' :
-               user.role === 'den' ? 'Combined section and sub-division performance tracking' :
-               user.role === 'inspector' ? 'Inspection Quality' :
-               'Product Performance',
-        data: [
+               user.role === 'den' ? 'Task Completion Rate' :
+               user.role === 'inspector' ? 'Inspection Quality Score' :
+               'Product Quality Rating',
+        data: user.role === 'admin' ? [
           { name: 'Week 1', value: 85 },
           { name: 'Week 2', value: 88 },
           { name: 'Week 3', value: 92 },
           { name: 'Week 4', value: 89 },
           { name: 'Week 5', value: 95 },
           { name: 'Week 6', value: 93 },
+        ] : user.role === 'drm' ? [
+          { name: 'Jan', value: 78 },
+          { name: 'Feb', value: 82 },
+          { name: 'Mar', value: 85 },
+          { name: 'Apr', value: 89 },
+          { name: 'May', value: 92 },
+          { name: 'Jun', value: 87 },
+        ] : user.role === 'den' ? [
+          { name: 'Week 1', value: 72 },
+          { name: 'Week 2', value: 78 },
+          { name: 'Week 3', value: 85 },
+          { name: 'Week 4', value: 82 },
+          { name: 'Week 5', value: 90 },
+          { name: 'Week 6', value: 88 },
+        ] : user.role === 'inspector' ? [
+          { name: 'Week 1', value: 88 },
+          { name: 'Week 2', value: 92 },
+          { name: 'Week 3', value: 85 },
+          { name: 'Week 4', value: 94 },
+          { name: 'Week 5', value: 89 },
+          { name: 'Week 6', value: 96 },
+        ] : [
+          { name: 'Jan', value: 4.2 },
+          { name: 'Feb', value: 4.5 },
+          { name: 'Mar', value: 4.3 },
+          { name: 'Apr', value: 4.7 },
+          { name: 'May', value: 4.6 },
+          { name: 'Jun', value: 4.8 },
         ]
       }
     ];
